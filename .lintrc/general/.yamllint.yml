@@ -1,0 +1,24 @@
+---
+# yamllint 配置
+# 文档：https://yamllint.readthedocs.io/en/stable/configuration.html
+# 用途：通用宽松规则，供 CI（yaml-lint job）及本地开发使用
+
+extends: default
+
+rules:
+  # 行长度：CI workflow 中的 run 块较长，放宽限制
+  line-length:
+    max: 200
+
+  # 冒号：允许最多两个空格（用于 YAML 对齐场景）
+  colons:
+    max-spaces-after: 2
+
+  # 布尔值：允许 on 用于 GitHub Actions 的 on: 触发器
+  truthy:
+    allowed-values: ["true", "false", "on"]
+    check-keys: false
+
+  # 注释：允许紧贴内容后的注释
+  comments:
+    min-spaces-from-content: 1

@@ -1,0 +1,74 @@
+{
+  "recommendations": [
+    // ── 主题 / 图标 ──────────────────────────────────────────
+    "github.github-vscode-theme",
+    "be5invis.vscode-icontheme-nomo-dark",
+
+    // ── 远程开发 ─────────────────────────────────────────────
+    "ms-vscode-remote.remote-ssh",
+    "ms-vscode-remote.remote-ssh-edit",
+    "ms-vscode-remote.remote-wsl",
+    "ms-vscode.remote-explorer",
+
+    // ── 语言包 ───────────────────────────────────────────────
+    "ms-ceintl.vscode-language-pack-zh-hans",
+
+    // ── TypeScript / JavaScript ──────────────────────────────
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+
+    // ── Python ───────────────────────────────────────────────
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "ms-python.vscode-python-envs",
+
+    // ── C / C++ ──────────────────────────────────────────────
+    "ms-vscode.cpptools",
+    "jeff-hykin.better-cpp-syntax",
+
+    // ── Rust ─────────────────────────────────────────────────
+    "rust-lang.rust-analyzer",
+
+    // ── Java ─────────────────────────────────────────────────
+    "redhat.java",
+
+    // ── Vue ──────────────────────────────────────────────────
+    "vue.volar",
+
+    // ── Shell / Bash ─────────────────────────────────────────
+    "timonwong.shellcheck",
+    "foxundermoon.shell-format",
+
+    // ── Markdown ─────────────────────────────────────────────
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+
+    // ── YAML ─────────────────────────────────────────────────
+    "redhat.vscode-yaml",
+
+    // ── TOML ─────────────────────────────────────────────────
+    "tamasfe.even-better-toml",
+
+    // ── 环境变量 ─────────────────────────────────────────────
+    "mikestead.dotenv",
+
+    // ── Git ──────────────────────────────────────────────────
+    "eamodio.gitlens",
+
+    // ── 代码质量 / 拼写检查 ──────────────────────────────────
+    "streetsidesoftware.code-spell-checker",
+    "usernamehw.errorlens",
+    "aaron-bond.better-comments",
+    "wayou.vscode-todo-highlight",
+
+    // ── 编辑体验 ─────────────────────────────────────────────
+    "editorconfig.editorconfig",
+    "shardulm94.trailing-spaces",
+    "naumovs.color-highlight",
+    "oderwat.indent-rainbow",
+    "christian-kohler.path-intellisense",
+    "kisstkondoros.vscode-gutter-preview",
+    "adpyke.codesnap"
+  ]
+}

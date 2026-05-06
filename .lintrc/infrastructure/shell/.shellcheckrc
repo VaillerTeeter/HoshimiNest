@@ -1,0 +1,20 @@
+# ShellCheck 配置 — https://www.shellcheck.net/wiki/Ignore
+# 此文件存放于 .lintrc/infrastructure/shell/，CI 会在运行 ShellCheck 前将其复制到仓库根目录（自动发现路径）
+
+# 默认 shell 方言（bash / sh / dash / ksh）
+shell=bash
+
+# ── 全局排除规则 ─────────────────────────────────────
+# SC2250: 参数展开中 % 和 # 的使用警告（误报率高）
+exclude=SC2250
+
+# ── 常见规则说明 ─────────────────────────────────────
+# SC2086: 变量引用缺少双引号          → 始终双引号包裹变量
+# SC2091: 双括号内变量展开问题        → 使用 [[ ]] 代替 [ ]
+# SC2155: 声明与赋值分离             → local/readonly 与赋值拆开
+# SC2164: cd 失败时继续执行          → 使用 cd ... || exit
+# SC2181: $? 检查返回值             → 直接在 if/while 中调用命令
+# SC2206: 未引用数组赋值             → 使用 mapfile 或明确引用
+# SC2207: 命令替换到数组             → 使用 mapfile -t arr < <(cmd)
+# SC2209: 将命令名赋给变量           → 注意区分变量名与命令名
+# SC3xxx: 非 POSIX 特性             → bash 脚本可忽略 SC3xxx 系列

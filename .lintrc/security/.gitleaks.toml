@@ -1,0 +1,36 @@
+title = "gitleaks config"
+
+[extend]
+# Use the default gitleaks ruleset as base
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key Pattern"
+regex = '''(?i)(api[_-]?key|apikey|api[_-]?token)\s*[:=]\s*['"]?[0-9a-zA-Z\-_.]{20,}'''
+tags = ["api-key", "generic"]
+severity = "HIGH"
+
+[[rules]]
+id = "generic-secret"
+description = "Generic Secret Pattern"
+regex = '''(?i)(secret|passwd|password)\s*[:=]\s*['"][^'"]{8,}['"]'''
+tags = ["secret", "generic"]
+severity = "HIGH"
+
+[allowlist]
+description = "Global allowlist"
+paths = [
+  '''.gitleaks\.toml''',
+  '''(.*?)\.(jpg|gif|docx?|pdf|bin|svg|socket)$''',
+  '''(go\.sum|package-lock\.json|yarn\.lock|Cargo\.lock|composer\.lock)''',
+  '''.env\.example''',
+  '''.env\.sample''',
+]
+regexes = [
+  # AWS example credentials from documentation
+  '''AKIAIOSFODNN7EXAMPLE''',
+  '''wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY''',
+  # GitHub Actions secret references (not actual secrets)
+  '''\$\{\{\s*secrets\.[A-Z_]+\s*\}\}''',
+]

@@ -1,0 +1,412 @@
+# Semgrep 安全扫描配置 — 极严格，覆盖 OWASP Top 10 2021
+# Run with: semgrep --config .lintrc/security/.semgrep.yml \
+#                   --config p/owasp-top-ten \
+#                   --config p/secrets \
+#                   --config p/security-audit \
+#                   --config p/r2c-security-audit \
+#                   --config p/jwt \
+#                   --config p/xss
+
+---
+rules:
+  # ============================================================
+  # A01: Broken Access Control
+  # ============================================================
+  - id: no-hardcoded-admin-bypass
+    pattern-either:
+      - pattern: |
+          if $USER == "admin"
+            ...
+          end
+      - pattern: |
+          if $ROLE == "admin"
+            ...
+          end
+      - pattern: $EXPR if $USER == "admin"
+      - pattern: $EXPR if $ROLE == "admin"
+    message: "Hardcoded role check detected. Use RBAC/ABAC via authorization middleware."
+    languages: [ruby]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-284: Improper Access Control"
+      owasp: "A01:2021 - Broken Access Control"
+
+  - id: no-hardcoded-admin-bypass-py
+    pattern-either:
+      - pattern: 'if $USER == "admin":'
+      - pattern: 'if $ROLE == "admin":'
+    message: "Hardcoded role check detected. Use RBAC/ABAC via authorization middleware."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-284: Improper Access Control"
+      owasp: "A01:2021 - Broken Access Control"
+
+  - id: no-hardcoded-admin-bypass-js
+    pattern-either:
+      - pattern: if ($USER == "admin")
+      - pattern: if ($ROLE == "admin")
+      - pattern: if ($USER === "admin")
+      - pattern: if ($ROLE === "admin")
+    message: "Hardcoded role check detected. Use RBAC/ABAC via authorization middleware."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-284: Improper Access Control"
+      owasp: "A01:2021 - Broken Access Control"
+
+  - id: no-hardcoded-admin-bypass-go
+    pattern-either:
+      - pattern: 'if $USER == "admin" { ... }'
+      - pattern: 'if $ROLE == "admin" { ... }'
+    message: "Hardcoded role check detected. Use RBAC/ABAC via authorization middleware."
+    languages: [go]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-284: Improper Access Control"
+      owasp: "A01:2021 - Broken Access Control"
+
+  - id: no-hardcoded-admin-bypass-java
+    pattern-either:
+      - pattern: 'if ($USER.equals("admin")) { ... }'
+      - pattern: 'if ($ROLE.equals("admin")) { ... }'
+      - pattern: 'if ("admin".equals($USER)) { ... }'
+      - pattern: 'if ($USER == "admin") { ... }'
+      - pattern: 'if ($ROLE == "admin") { ... }'
+    message: "Hardcoded role check detected. Use RBAC/ABAC via authorization middleware."
+    languages: [java]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-284: Improper Access Control"
+      owasp: "A01:2021 - Broken Access Control"
+
+  - id: path-traversal
+    pattern-either:
+      - pattern: open($BASE + $USER_INPUT)
+      - pattern: open($BASE + "/" + $USER_INPUT)
+      - pattern: File($BASE + $USER_INPUT)
+    message: "Possible path traversal. Sanitize and validate file paths with allowlists."
+    languages: [python, java, javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-22: Path Traversal"
+      owasp: "A01:2021 - Broken Access Control"
+
+  # ============================================================
+  # A02: Cryptographic Failures
+  # ============================================================
+  - id: no-hardcoded-password
+    pattern-either:
+      - pattern: password = "..."
+      - pattern: passwd = "..."
+      - pattern: pwd = "..."
+      - pattern: PASSWORD = "..."
+    message: "Hardcoded password detected. Use environment variables or secrets manager."
+    languages: [python, javascript, typescript, go, java, ruby]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  - id: no-hardcoded-secret
+    pattern-either:
+      - pattern: secret = "..."
+      - pattern: api_key = "..."
+      - pattern: access_token = "..."
+      - pattern: private_key = "..."
+      - pattern: SECRET_KEY = "..."
+    message: "Hardcoded secret detected. Use environment variables or secrets manager."
+    languages: [python, javascript, typescript, go, java, ruby]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  - id: weak-hash-algorithm
+    pattern-either:
+      - pattern: hashlib.md5(...)
+      - pattern: hashlib.sha1(...)
+      - pattern: MessageDigest.getInstance("MD5")
+      - pattern: MessageDigest.getInstance("SHA-1")
+    message: "Weak hash algorithm detected. Use SHA-256 or stronger for security purposes."
+    languages: [python, java]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  - id: insecure-random
+    pattern-either:
+      - pattern: random.random()
+      - pattern: random.randint(...)
+      - pattern: random.choice(...)
+      - pattern: random.shuffle(...)
+      - pattern: random.sample(...)
+      - pattern: Math.random()
+      - pattern: new Random()
+    message: "Use cryptographically secure random generators (secrets/crypto.getRandomValues/SecureRandom)."
+    languages: [python, javascript, typescript, java]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  - id: hardcoded-iv
+    pattern-either:
+      - pattern: iv = b"..."
+      - pattern: IV = "..."
+    message: "Hardcoded IV/nonce detected. Generate a random IV for each encryption operation."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-330: Use of Insufficiently Random Values"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  - id: hardcoded-iv-js
+    pattern-either:
+      - pattern: var iv = "..."
+      - pattern: const iv = "..."
+      - pattern: let iv = "..."
+      - pattern: var IV = "..."
+      - pattern: const IV = "..."
+    message: "Hardcoded IV/nonce detected. Generate a random IV for each encryption operation."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-330: Use of Insufficiently Random Values"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  - id: hardcoded-iv-java
+    pattern: 'new IvParameterSpec("...".getBytes())'
+    message: "Hardcoded IV/nonce detected. Generate a random IV for each encryption operation."
+    languages: [java]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-330: Use of Insufficiently Random Values"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  # ============================================================
+  # A03: Injection
+  # ============================================================
+  - id: no-sql-string-concat
+    pattern-either:
+      - pattern: $QUERY = "SELECT" + $USER_INPUT
+      - pattern: $QUERY = "INSERT" + $USER_INPUT
+      - pattern: $QUERY = "UPDATE" + $USER_INPUT
+      - pattern: $QUERY = "DELETE" + $USER_INPUT
+    message: "Possible SQL injection via string concatenation. Use parameterized queries."
+    languages: [python, javascript, typescript, java, ruby]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 - Injection"
+
+  - id: no-sql-fstring-injection
+    pattern-either:
+      - pattern: '$QUERY = f"SELECT ... {$USER_INPUT} ..."'
+      - pattern: '$QUERY = f"INSERT ... {$USER_INPUT} ..."'
+      - pattern: '$QUERY = f"UPDATE ... {$USER_INPUT} ..."'
+      - pattern: '$QUERY = f"DELETE ... {$USER_INPUT} ..."'
+    message: "Possible SQL injection via f-string interpolation. Use parameterized queries."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 - Injection"
+
+  - id: no-os-command-injection
+    pattern-either:
+      - pattern: os.system($USER_INPUT)
+      - pattern: subprocess.call($USER_INPUT, shell=True)
+      - pattern: subprocess.run($USER_INPUT, shell=True)
+      - pattern: exec($USER_INPUT)
+      - pattern: Runtime.getRuntime().exec($USER_INPUT)
+    message: "Possible OS command injection. Avoid shell=True and validate all user input."
+    languages: [python, java, javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-78: OS Command Injection"
+      owasp: "A03:2021 - Injection"
+
+  - id: no-eval-user-input
+    pattern: eval($X)
+    message: "Avoid eval() with potentially user-controlled input."
+    languages: [javascript, typescript, python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      owasp: "A03:2021 - Injection"
+
+  - id: no-ldap-injection
+    pattern: ldap.search($BASE, $FILTER + $USER_INPUT)
+    message: "Possible LDAP injection. Use LDAP-safe escaping for user input."
+    languages: [python, java]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-90: LDAP Injection"
+      owasp: "A03:2021 - Injection"
+
+  # ============================================================
+  # A05: Security Misconfiguration
+  # ============================================================
+  - id: debug-mode-enabled
+    pattern-either:
+      - pattern: DEBUG = True
+      - pattern: debug=True
+      - pattern: app.run(debug=True)
+    message: "Debug mode must be disabled in production environments."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-489: Active Debug Code"
+      owasp: "A05:2021 - Security Misconfiguration"
+
+  - id: insecure-cors-wildcard
+    pattern-either:
+      - pattern: Access-Control-Allow-Origin = "*"
+      - pattern: 'cors({ origin: "*" })'
+      - pattern: CORS(app, origins="*")
+    message: "Wildcard CORS policy exposes APIs to any origin. Specify allowed origins explicitly."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-942: Permissive Cross-domain Policy"
+      owasp: "A05:2021 - Security Misconfiguration"
+
+  # ============================================================
+  # A07: Identification and Authentication Failures
+  # ============================================================
+  - id: insecure-cookie-no-secure-flag
+    pattern-either:
+      - pattern: response.set_cookie($NAME, $VAL)
+      - pattern: res.cookie($NAME, $VAL)
+    message: "Cookie missing Secure, HttpOnly, and SameSite flags. Set all three for sensitive cookies."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-614: Sensitive Cookie Without 'Secure' Attribute"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+
+  - id: weak-jwt-algorithm
+    pattern-either:
+      - pattern: jwt.encode($PAYLOAD, $SECRET, algorithm="HS256")
+      - pattern: jwt.encode($PAYLOAD, $SECRET, algorithm="HS384")
+      - pattern: jwt.encode($PAYLOAD, $SECRET, algorithm="HS512")
+      - pattern: jwt.encode($PAYLOAD, $SECRET, algorithm="none")
+    message: "Weak or insecure JWT algorithm. Use RS256/ES256 (asymmetric) instead of symmetric HMAC or 'none'."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+
+  # ============================================================
+  # A08: Software and Data Integrity Failures
+  # ============================================================
+  - id: no-unsafe-deserialization-pickle
+    pattern-either:
+      - pattern: pickle.loads($USER_INPUT)
+      - pattern: yaml.load($USER_INPUT)
+    message: "Unsafe deserialization. Use yaml.safe_load() and avoid pickle with untrusted data."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+
+  # ============================================================
+  # A09: Security Logging and Monitoring Failures
+  # ============================================================
+  - id: no-password-in-log
+    pattern-either:
+      - pattern: logger.info("... password ...")
+      - pattern: log.info("... password ...")
+      - pattern: console.log("... password ...")
+      - pattern: System.out.println("... password ...")
+    message: "Possible credential exposure in logs. Never log passwords, tokens, or secrets."
+    languages: [python, javascript, typescript, java]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-532: Insertion of Sensitive Information into Log File"
+      owasp: "A09:2021 - Security Logging and Monitoring Failures"
+
+  # ============================================================
+  # A10: Server-Side Request Forgery (SSRF)
+  # ============================================================
+  - id: ssrf-user-controlled-url
+    pattern-either:
+      - pattern: requests.get($USER_INPUT)
+      - pattern: requests.post($USER_INPUT)
+      - pattern: urllib.request.urlopen($USER_INPUT)
+      - pattern: fetch($USER_INPUT)
+      - pattern: axios.get($USER_INPUT)
+    message: "Possible SSRF. Validate and allowlist URLs before making outbound HTTP requests."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-918: Server-Side Request Forgery"
+      owasp: "A10:2021 - Server-Side Request Forgery"
+
+  # ============================================================
+  # A03: Injection — XML External Entity (XXE)
+  # ============================================================
+  - id: xml-external-entity-xxe
+    pattern-either:
+      - pattern: lxml.etree.parse($INPUT)
+      - pattern: lxml.etree.fromstring($INPUT)
+      - pattern: xml.etree.ElementTree.parse($INPUT)
+      - pattern: xml.etree.ElementTree.fromstring($INPUT)
+      - pattern: xml.sax.parse($INPUT, ...)
+      - pattern: xml.dom.minidom.parse($INPUT)
+    message: "Potential XXE vulnerability. Use defusedxml library or configure parsers to disable external entities."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-611: Improper Restriction of XML External Entity Reference"
+      owasp: "A03:2021 - Injection"
+
+  # ============================================================
+  # A04: Insecure Design
+  # ============================================================
+  - id: unrestricted-file-upload
+    pattern: $FILE.save(os.path.join($DIR, $FILENAME))
+    message: "Potential unrestricted file upload. Validate file type/extension and sanitize filename before saving."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-434: Unrestricted Upload of File with Dangerous Type"
+      owasp: "A04:2021 - Insecure Design"
+
+  - id: mass-assignment-vulnerability
+    pattern-either:
+      - pattern: $MODEL(**request.json())
+      - pattern: $MODEL(**request.form)
+      - pattern: $MODEL(**$REQUEST.data)
+    message: >-
+      Potential mass assignment. Explicitly allowlist fields instead of
+      passing raw request data to model constructors.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      owasp: "A04:2021 - Insecure Design"
+
+  # ============================================================
+  # A03: Injection — XML External Entity (XXE) — Java
+  # ============================================================
+  - id: xml-external-entity-xxe-java
+    pattern-either:
+      - pattern: |
+          DocumentBuilderFactory $F = DocumentBuilderFactory.newInstance();
+          ...
+          $F.newDocumentBuilder().parse($INPUT);
+      - pattern: SAXParserFactory.newInstance().newSAXParser().parse($INPUT, ...)
+      - pattern: XMLInputFactory.newInstance().createXMLStreamReader($INPUT)
+    message: >-
+      Potential XXE in Java XML parser. Disable external entities:
+      factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true).
+    languages: [java]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-611: Improper Restriction of XML External Entity Reference"
+      owasp: "A03:2021 - Injection"

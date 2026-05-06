@@ -1,0 +1,244 @@
+{
+  // GitHub Copilot 工具审批策略
+  // chat.tools.autoApprove 留空 = 所有工具操作均需手动确认（默认行为）
+  "chat.tools.autoApprove": [
+    // 终端命令仅批准精确匹配；不使用通配符，避免通过重定向、链式执行等方式绕过审批
+    "run_in_terminal:cd",
+    "run_in_terminal:ls",
+    "run_in_terminal:which",
+    "run_in_terminal:pwd",
+    "run_in_terminal:head",
+    "run_in_terminal:tail",
+    "run_in_terminal:wc",
+    "run_in_terminal:du",
+    "run_in_terminal:df",
+    // 终端只读命令 — git
+    "run_in_terminal:git log",
+    "run_in_terminal:git diff",
+    "run_in_terminal:git status",
+    // git branch 只批准精确列出操作（不加通配符，避免 -d / -D / --delete 等删除命令被误批）
+    "run_in_terminal:git branch",
+    "run_in_terminal:git branch -v",
+    "run_in_terminal:git branch -a",
+    "run_in_terminal:git branch -r",
+    "run_in_terminal:git branch --list",
+    "run_in_terminal:git remote",
+    "run_in_terminal:git show",
+    "run_in_terminal:git stash list",
+    // git tag 只批准列出操作
+    "run_in_terminal:git tag",
+    "run_in_terminal:git tag -l",
+    "run_in_terminal:git tag --list",
+    // 终端只读命令 — Node / npm
+    "run_in_terminal:node --version",
+    "run_in_terminal:npm list",
+    // GitHub MCP — 只读类（查询不修改）
+    "mcp_github_list_issues",
+    "mcp_github_get_issue",
+    "mcp_github_search_issues",
+    "mcp_github_list_pull_requests",
+    "mcp_github_get_pull_request",
+    "mcp_github_get_pull_request_files",
+    "mcp_github_get_pull_request_status",
+    "mcp_github_get_pull_request_reviews",
+    "mcp_github_get_pull_request_comments",
+    "mcp_github_get_file_contents",
+    "mcp_github_list_commits",
+    "mcp_github_search_repositories",
+    "mcp_github_search_code",
+    "mcp_github_search_users"
+    // ⚠️ 写操作（create / update / merge / push）故意不加，保持手动确认
+  ],
+
+  // Agent 模式单次会话最大自动请求次数（当前设为 1000，允许单次会话连续执行多个工具调用；若设为 1，则每次工具调用后都必须停下等待用户确认）
+  "chat.agent.maxRequests": 1000,
+
+  // 显式声明远程 JSON Schema，避免 VS Code JSON 语言服务器报"不受信任"警告
+  "json.schemas": [
+    {
+      "url": "https://unpkg.com/knip@5/schema.json",
+      "fileMatch": [".lintrc/frontend/knip.json"]
+    },
+    {
+      "url": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell-types/cspell.schema.json",
+      "fileMatch": [".lintrc/general/cspell.json"]
+    }
+  ],
+
+  // cSpell：从 .lintrc/general/cspell.json 导入词表（CI 的唯一权威来源）
+  // VS Code 扩展会合并导入配置中的 words / ignoreWords / flagWords，
+  // 无需在此重复维护词表；CI 通过 --config 显式传参，两者共用同一份配置。
+  "cSpell.import": ["./.lintrc/general/cspell.json"],
+
+  // 防止 cSpell 对 cspell.json 文件本身做拼写检查
+  "cSpell.ignorePaths": [
+    ".lintrc/general/cspell.json"
+  ],
+
+  // Trailing Spaces — 保存时自动删除行尾多余空格
+  "trailing-spaces.trimOnSave": true,
+  // 当前正在编辑的行不高亮行尾空格（避免打字时闪烁干扰）
+  "trailing-spaces.highlightCurrentLine": false,
+
+  // GitLens — 保留函数/类上方的 CodeLens（"3 commits · 2 authors" 样式）
+  // 内联 blame（行末 "John · 2 days ago"）默认保留
+  "gitlens.codeLens.enabled": true,
+
+  // CodeSnap — 截图样式
+  "codesnap.showWindowTitle": true,       // 截图顶部显示文件名
+  "codesnap.showWindowControls": true,    // 显示红绿灯按钮（macOS 风格）
+  "codesnap.roundedCorners": true,        // 圆角容器
+  "codesnap.backgroundColor": "#1e1e2e",  // 截图背景色（深色，可自行改颜色）
+  "codesnap.boxShadow": "0 20px 60px rgba(0,0,0,0.5)", // 阴影
+
+  // Image Preview — 行号侧边栏图片预览高度（默认 100，适当调大）
+  "gutterpreview.imagePreviewMaxHeight": 200,
+
+  // Path Intellisense — import 补全时自动附加文件扩展名（.ts / .json 等）
+  "path-intellisense.extensionOnImport": true,
+
+  // ── 内置功能（无需插件）────────────────────────────────────
+  // 括号对彩虹色（VS Code 1.67+ 内置）
+  "editor.bracketPairColorization.enabled": true,
+  // 高亮当前光标所在括号对的连接线
+  "editor.guides.bracketPairs": "active",
+  // 粘性滚动 — 当前所在函数/类名固定在编辑器顶部
+  "editor.stickyScroll.enabled": true,
+
+  // ── Markdown ──────────────────────────────────────────────
+  // Markdown All in One — 保存时自动更新目录（TOC）
+  "markdown.extension.toc.updateOnSave": true,
+  // TOC 使用无序列表（- ），与 GitHub 渲染一致
+  "markdown.extension.toc.orderedList": false,
+  // 斜体使用 * 而不是 _（与 GFM 推荐一致）
+  "markdown.extension.italic.indicator": "*",
+
+  // markdownlint — 规则微调
+  "markdownlint.config": {
+    // MD013: 行长度限制 — 关闭（文档行长通常不做硬性限制）
+    "MD013": false,
+    // MD033: 禁止内联 HTML — 关闭（README 里常用 <br> <details> 等）
+    "MD033": false,
+    // MD041: 文件首行必须是 h1 — 关闭（CONTRIBUTING / SECURITY 等文件首行不一定是标题）
+    "MD041": false
+  },
+
+  // Markdown 文件豁免行尾空格裁剪（两个空格 = <br> 换行，不能删）
+  "[markdown]": {
+    "trailing-spaces.trimOnSave": false
+  },
+
+  // ── TypeScript / JavaScript (ESLint + Prettier) ───────────
+  // 配置文件在非标准路径，必须显式指定，否则插件找不到
+
+  // Prettier — 指向非标准路径的配置文件
+  "prettier.configPath": ".lintrc/frontend/prettier/.prettierrc",
+  // TS/JS 文件默认格式化器设为 Prettier
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+
+  // ESLint — 指向非标准路径的配置文件（eslint@8 旧版 eslintrc 格式）
+  "eslint.options": {
+    "overrideConfigFile": ".lintrc/frontend/typescript/.eslintrc-ts.json"
+  },
+  // 仅对 TS/JS 文件启用 ESLint（避免对其他语言误报）
+  "eslint.validate": [
+    "javascript",
+    "typescript"
+  ],
+  // 保存时自动修复 ESLint 可自动修复的问题
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // 移动/重命名文件时自动更新所有 import 路径（VS Code 内置功能）
+  "js/ts.updateImportsOnFileMove.enabled": "always",
+
+  // ── Shell / Bash (ShellCheck + shell-format) ──────────────
+  // Remote SSH 连接 Ubuntu 后，插件自动使用远程的 shellcheck / shfmt 工具
+  // ShellCheck — 默认检查所有 shell 文件，无需额外配置路径
+  // 指定目标 shell 方言：bash（按需改为 sh / ksh / dash）
+  "shellcheck.customArgs": ["--shell=bash"],
+  // 排除不需要的规则（按需添加）：
+  // SC1091 = 忽略 source 文件找不到的警告（常见于 CI 脚本）
+  "shellcheck.exclude": ["SC1091"],
+
+  // shell-format — sh / bash / zsh 文件保存时自动格式化
+  "[shellscript]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format",
+    "editor.formatOnSave": true
+  },
+  // shfmt 格式化参数：-i 2 = 2空格缩进，-ci = switch case 缩进，-bn = 二元运算符换行
+  "shellformat.flag": "-i 2 -ci -bn",
+
+  // ── YAML (redhat.vscode-yaml) ─────────────────────────────
+  // Schema 关联：对 GitHub Actions / Dependabot 文件提供智能补全和验证
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml",
+    "https://json.schemastore.org/dependabot-2.0.json": ".github/dependabot.yml"
+  },
+  // 禁用插件内置格式化（改用 Prettier，避免两者冲突）
+  "yaml.format.enable": false,
+  // YAML 文件格式化器设为 Prettier（.prettierrc 已有 YAML 专项配置：2空格、singleQuote: false）
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+
+  // ── TOML (tamasfe.even-better-toml) ──────────────────────
+  // 项目中有 .lintrc/security/.gitleaks.toml
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml",
+    "editor.formatOnSave": true
+  },
+  // 表格（[section]）内部缩进对齐，可读性更好
+  "evenBetterToml.formatter.indentTables": true,
+
+  // ── Python (ms-python / pylance) ─────────────────────────
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.formatOnSave": true
+  },
+  // Pylance — 类型检查强度（off / basic / standard / strict）
+  "python.analysis.typeCheckingMode": "basic",
+  // 导入补全时自动添加缺失的 import
+  "python.analysis.autoImportCompletions": true,
+
+  // ── C / C++ (ms-vscode.cpptools) ─────────────────────────
+  "[c]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.formatOnSave": true
+  },
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.formatOnSave": true
+  },
+  // ClangFormat 风格（按需改为 LLVM / Mozilla / WebKit / Microsoft / Google）
+  "C_Cpp.clang_format_style": "Google",
+
+  // ── Rust (rust-lang.rust-analyzer) ───────────────────────
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true
+  },
+  // 保存时运行 clippy 检查（比默认 cargo check 更严格）
+  "rust-analyzer.check.command": "clippy",
+
+  // ── Java (redhat.java) ────────────────────────────────────
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java",
+    "editor.formatOnSave": true
+  },
+
+  // ── Vue (Vue.volar) ──────────────────────────────────────
+  "[vue]": {
+    "editor.defaultFormatter": "Vue.volar",
+    "editor.formatOnSave": true
+  }
+}

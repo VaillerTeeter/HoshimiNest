@@ -1,0 +1,88 @@
+# rustfmt 配置 — https://rust-lang.github.io/rustfmt/
+# 适用 Rust Edition 2021
+
+edition = "2021"
+
+# 行宽上限
+max_width = 100
+
+# 缩进宽度（空格数）
+tab_spaces = 4
+
+# 缩进风格：块缩进（推荐用于可读性）
+indent_style = "Block"
+
+# 启用小启发式（根据内容自动选择单行/多行）
+use_small_heuristics = "Default"
+
+# ── Import 排序与分组 ────────────────────────────────
+# 自动对 use 语句排序
+reorder_imports = true
+
+# 自动对模块声明排序
+reorder_modules = true
+
+# 导入合并粒度：合并到 crate 级别
+imports_granularity = "Crate"
+
+# 分组：std → 外部 crate → 自身 crate
+group_imports = "StdExternalCrate"
+
+# ── 注释与文档 ───────────────────────────────────────
+# 格式化 doc 注释中的代码块
+format_code_in_doc_comments = true
+
+# 格式化宏匹配器
+format_macro_matchers = true
+
+# 规范化注释（统一行注释格式）
+normalize_comments = true
+
+# 规范化文档属性（#[doc = "..."] → /// ...）
+normalize_doc_attributes = true
+
+# 自动换行注释，保持在 max_width 内
+wrap_comments = true
+comment_width = 100
+
+# ── 简写语法 ─────────────────────────────────────────
+# 优先使用 ? 操作符代替 try!()
+use_try_shorthand = true
+
+# 结构体初始化时使用字段简写（Foo { x, y } 代替 Foo { x: x, y: y }）
+use_field_init_shorthand = true
+
+# ── 尾随符号 ─────────────────────────────────────────
+# 多行结构体/枚举/函数参数的最后一项保留尾随逗号
+trailing_comma = "Vertical"
+
+# 语句末尾保留分号
+trailing_semicolon = true
+
+# ── 其他代码风格 ─────────────────────────────────────
+# 压缩通配符后缀（a | b | .. 合并）
+condense_wildcard_suffixes = true
+
+# 强制显式 ABI 声明
+force_explicit_abi = true
+
+# match 臂使用块包裹（当内容超过一行时）
+match_arm_blocks = true
+
+# match 块最后一个臂加尾随逗号
+match_block_trailing_comma = true
+
+# 空 impl/struct/enum 使用单行
+empty_item_single_line = true
+
+# 单行函数体（短函数允许写在一行）
+fn_single_line = false
+
+# 结构体字面量允许单行（当字段少且短时）
+struct_lit_single_line = true
+
+# 闭包体换行风格
+brace_style = "SameLineWhere"
+
+# where 子句风格：条件放在同一行或缩进
+where_single_line = false

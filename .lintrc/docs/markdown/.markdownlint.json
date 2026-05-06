@@ -1,0 +1,6 @@
+{
+  "default": true,
+  "MD013": { "line_length": 400, "tables": false, "code_blocks": false },
+  "MD033": { "allowed_elements": ["!--"] },
+  "MD041": false
+}

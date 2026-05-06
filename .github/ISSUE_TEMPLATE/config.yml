@@ -1,0 +1,6 @@
+---
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞 / Security Vulnerability
+    url: mailto:wyc_19533480830@outlook.com
+    about: 请通过邮件私下报告安全漏洞 / Please report security vulnerabilities privately via email

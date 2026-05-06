@@ -1,0 +1,46 @@
+# Taplo — TOML 代码格式化配置
+# 用法：taplo fmt --check --config .lintrc/data-formats/toml/taplo.toml <files>
+# 文档：https://taplo.tamasfe.dev/configuration/
+
+[formatting]
+# 对齐注释（行尾 #...）
+align_comments = true
+
+# 对齐数组中的条目
+align_entries = false
+
+# 数组中允许多少个内联元素
+array_auto_collapse = true
+array_auto_expand = true
+array_trailing_comma = true
+
+# 列宽（超过时展开数组/表格）
+column_width = 120
+
+# 缩进字符
+indent_string = "  " # 2 空格
+
+# 表格间的空行数
+indent_tables = false
+trailing_newline = true
+
+# 重新排序 key（通常关闭，以保持语义顺序）
+reorder_keys = false
+reorder_arrays = false
+
+[schema]
+# 开启 JSON Schema 验证（taplo check）
+enabled = true
+
+# 内置已知 TOML 文件的 schema 关联
+[[rule]]
+name = "Cargo.toml"
+include = ["Cargo.toml", "Cargo.lock"]
+
+[[rule]]
+name = "pyproject.toml"
+include = ["pyproject.toml"]
+
+[[rule]]
+name = "taplo.toml"
+include = ["taplo.toml", ".taplo.toml"]

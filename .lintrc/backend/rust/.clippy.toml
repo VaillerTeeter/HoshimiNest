@@ -1,0 +1,53 @@
+# Clippy 配置 — https://doc.rust-lang.org/clippy/configuration.html
+# 适用于 cargo clippy -- -D warnings -D clippy::pedantic -D clippy::nursery
+
+# ── 函数与复杂度限制 ─────────────────────────────────
+
+# 函数参数数量上限（超过则触发 clippy::too_many_arguments）
+too-many-arguments-threshold = 5
+
+# 函数行数上限（超过则触发 clippy::too_many_lines）
+too-many-lines-threshold = 60
+
+# 认知复杂度上限（超过则触发 clippy::cognitive_complexity）
+cognitive-complexity-threshold = 10
+
+# 类型复杂度得分上限（超过则触发 clippy::type_complexity）
+type-complexity-threshold = 250
+
+# ── 安全 / 调试相关 ──────────────────────────────────
+
+# 测试代码中允许 println!/print! 宏（不在测试中报错）
+allow-print-in-tests = true
+
+# 是否允许在非内联格式化参数中混用格式
+allow-mixed-uninlined-format-args = false
+
+# ── 文档检查 ─────────────────────────────────────────
+
+# 检查私有条目的文档
+check-private-items = true
+
+# ── 禁用方法列表（推荐显式错误处理） ────────────────
+# 生产代码中禁止使用 unwrap/expect，推荐使用 ? 操作符或 map_err
+disallowed-methods = [
+  { path = "std::option::Option::unwrap", reason = "请使用 '?' 或 ok_or/map_err 进行显式错误处理" },
+  { path = "std::result::Result::unwrap", reason = "请使用 '?' 或 map_err 进行显式错误处理" },
+  { path = "std::option::Option::expect", reason = "仅限测试或明确 panic 场景，生产代码请改用显式处理" },
+  { path = "std::result::Result::expect", reason = "仅限测试或明确 panic 场景，生产代码请改用显式处理" },
+]
+
+# ── 禁用宏列表 ───────────────────────────────────────
+disallowed-macros = [
+  { path = "std::panic", reason = "生产代码应返回 Result/Option 而非 panic！" },
+  { path = "std::todo", reason = "合并前须完成 TODO 代码" },
+  { path = "std::unimplemented", reason = "合并前须实现该功能" },
+]
+
+# ── 命名规范 ─────────────────────────────────────────
+
+# 枚举变体名称中允许的前缀（为空时不允许枚举变体名重复枚举名）
+enum-variant-name-threshold = 3
+
+# 结构体/枚举字段名最小长度（短于此长度不触发 min-ident-chars）
+min-ident-chars-threshold = 2
