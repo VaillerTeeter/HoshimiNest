@@ -1,0 +1,26 @@
+/* ─────────────────────────────────────────────────
+   Default theme — warm parchment (animal-island-ui)
+   规范：仅允许在此文件中定义 --theme-* CSS 变量。
+   App.css 中所有颜色/字体/尺寸必须引用这里的变量。
+   换肤时替换/覆盖此文件即可。
+   ───────────────────────────────────────────────── */
+:root {
+  /* ── Layout ─────────────────────────────────── */
+  --theme-topbar-height:  48px;
+  --theme-sidebar-width:  56px;
+
+  /* ── Colors ─────────────────────────────────── */
+  --theme-bar-bg:         #f0e8d8;              /* 顶栏/侧栏底色（--animal-bg-color-secondary） */
+  --theme-bar-border:     #e8e2d6;              /* 分割线（--animal-border-color-light） */
+  --theme-bar-text:       #794f27;              /* 文字色（--animal-text-color） */
+  --theme-content-bg:     #f8f8f0;              /* 主内容区底色（--animal-bg-color） */
+  --theme-nav-hover-bg:   #794f27;            /* 导航按钮 hover 态 */
+  --theme-nav-active-bg:  #794f27;            /* 导航按钮选中态 */
+
+  /* ── Typography ─────────────────────────────── */
+  /* 站酷快乐体 — 字体文件内置于 src/assets/fonts/，无需网络 */
+  --theme-font:           'ZCOOL KuaiLe', 'Zen Maru Gothic', 'Noto Sans SC', sans-serif;
+  --theme-title-size:     20px;
+  --theme-title-weight:   500;
+  --theme-title-spacing:  0.04em;
+}
