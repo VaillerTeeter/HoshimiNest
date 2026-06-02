@@ -19,6 +19,7 @@
 MikanBox is a desktop anime tracking & download manager.
 
 Tech stack:
+
 - **Tauri v2** — Rust backend, desktop shell
 - **React 19 + TypeScript** — frontend, strict mode
 - **Vite 7** — bundler (dev port: `1520`)
@@ -117,7 +118,7 @@ When offering options, give at most 2. Do not list every possible alternative.
 When the user says "检查指令" or "check instructions", respond with ONLY this fixed format and nothing else:
 <!-- 用户说"检查指令"时，只输出以下固定格式，不要加任何额外内容 -->
 
-```
+```text
 ✅ 指令文件已加载
 - 包管理器: yarn（禁止 npm / pnpm）
 - 样式方案: 纯 CSS（禁止 Tailwind）

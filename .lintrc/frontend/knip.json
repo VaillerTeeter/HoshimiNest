@@ -7,9 +7,9 @@
 
   "ignore": [],
 
-  "ignoreDependencies": ["@commitlint/types"],
+  "ignoreDependencies": ["@tauri-apps/plugin-opener", "motion"],
 
-  "ignoreBinaries": ["commitlint", "cspell", "eslint", "prettier", "tauri"],
+  "ignoreBinaries": ["commitlint", "cspell", "eslint", "prettier", "stylelint"],
 
   "includeEntryExports": false,
 

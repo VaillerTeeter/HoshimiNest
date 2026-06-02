@@ -215,7 +215,7 @@ yarn tauri build
 `lint.yml` 包含以下 15 项检查：
 
 | 检查项 | 工具 | 覆盖范围 |
-|---|---|---|
+| --- | --- | --- |
 | markdown-lint | markdownlint-cli | `**/*.md` |
 | yaml-lint | yamllint | `**/*.{yml,yaml}` |
 | toml-lint | taplo | `**/*.toml` |
@@ -243,7 +243,7 @@ yarn tauri build
 目前包含的指令文件：
 
 | 文件 | 说明 |
-|---|---|
+| --- | --- |
 | `context7.instructions.md` | 库/框架文档查询规范（Context7 MCP 工具调用顺序与 library ID 选择） |
 | `git-workflow.instructions.md` | AI git 操作行为规范（授权要求、分支命名、提交规范、PR 工作流） |
 | `react-bits.instructions.md` | React Bits 动效组件引入规范（源码复制方式，非 npm 包） |

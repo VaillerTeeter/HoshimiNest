@@ -1,21 +1,22 @@
-﻿import { useState, useRef, useEffect } from 'react';
-import './App.css';
-import { Button, Icon, Loading, type IconName } from 'animal-island-ui';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import QueryPage from './pages/QueryPage';
-import WatchingPage from './pages/WatchingPage';
+import { Button, Icon, Loading, type IconName } from 'animal-island-ui';
+import { useState, useRef, useEffect, type MutableRefObject } from 'react';
+
+import './App.css';
 import BacklogPage from './pages/BacklogPage';
-import FinishedPage from './pages/FinishedPage';
-import SearchPage from './pages/SearchPage';
 import DownloadPage from './pages/DownloadPage';
+import FinishedPage from './pages/FinishedPage';
+import QueryPage from './pages/QueryPage';
+import SearchPage from './pages/SearchPage';
 import TracksPage from './pages/TracksPage';
+import WatchingPage from './pages/WatchingPage';
 import { DownloadProvider } from './store/downloadStore';
 
 const appWindow = getCurrentWindow();
 
 type PageKey = 'query' | 'watching' | 'backlog' | 'finished' | 'search' | 'download' | 'tracks';
 
-const NAV_ITEMS: { key: PageKey; label: string; icon: IconName }[] = [
+const NAV_ITEMS: Array<{ key: PageKey; label: string; icon: IconName }> = [
   { key: 'query', label: '季度查询', icon: 'icon-critterpedia' },
   { key: 'watching', label: '正在追番', icon: 'icon-camera' },
   { key: 'backlog', label: '补番计划', icon: 'icon-map' },
@@ -25,27 +26,163 @@ const NAV_ITEMS: { key: PageKey; label: string; icon: IconName }[] = [
   { key: 'tracks', label: '轨道工坊', icon: 'icon-diy' },
 ];
 
-const PAGE_COMPONENTS: Record<PageKey, React.ComponentType> = {
-  query: QueryPage,
-  watching: WatchingPage,
-  backlog: BacklogPage,
-  finished: FinishedPage,
-  search: SearchPage,
-  download: DownloadPage,
-  tracks: TracksPage,
-};
-
-/** 独立计时组件：每秒只重渲染自身，不波及兄弟节点 Loading 的动画 */
-function LoadingTimer() {
+/**
+ * 独立计时组件：每秒只重渲染自身，不波及兄弟节点 Loading 的动画
+ *
+ * @returns JSX element showing elapsed seconds
+ */
+function LoadingTimer(): React.JSX.Element {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
-    return () => clearInterval(id);
+    const id = setInterval(() => {
+      setSeconds((s) => s + 1);
+    }, 1000);
+    return () => {
+      clearInterval(id);
+    };
   }, []);
   return <span className="query-loading-timer">{seconds} s</span>;
 }
 
-export default function App() {
+interface LoadingOverlayProps {
+  onCancel: () => void;
+}
+
+function LoadingOverlay({ onCancel }: LoadingOverlayProps): React.JSX.Element {
+  return (
+    <div className="query-loading-overlay">
+      <button
+        type="button"
+        className="query-loading-cancel"
+        onClick={onCancel}
+        title="取消搜索"
+        aria-label="取消搜索"
+      >
+        ✕
+      </button>
+      <LoadingTimer />
+      <Loading active className="query-loading-inner" />
+    </div>
+  );
+}
+
+interface PageContentProps {
+  itemKey: PageKey;
+  page: PageKey;
+  onLoadingChange: (v: boolean) => void;
+  cancelRef: MutableRefObject<(() => void) | null>;
+  onTitleChange: (v: { yearSeason: string; count: number } | null) => void;
+}
+
+function PageContent({
+  itemKey,
+  page,
+  onLoadingChange,
+  cancelRef,
+  onTitleChange,
+}: PageContentProps): React.JSX.Element {
+  if (itemKey === 'query') {
+    return (
+      <QueryPage
+        onLoadingChange={onLoadingChange}
+        cancelRef={cancelRef}
+        onTitleChange={onTitleChange}
+      />
+    );
+  }
+  if (itemKey === 'watching') {
+    return <WatchingPage isActive={page === 'watching'} />;
+  }
+  if (itemKey === 'backlog') {
+    return <BacklogPage isActive={page === 'backlog'} />;
+  }
+  if (itemKey === 'finished') {
+    return <FinishedPage isActive={page === 'finished'} />;
+  }
+  if (itemKey === 'search') {
+    return <SearchPage />;
+  }
+  if (itemKey === 'download') {
+    return <DownloadPage />;
+  }
+  return <TracksPage />;
+}
+
+interface SideNavProps {
+  page: PageKey;
+  onNavigate: (key: PageKey) => void;
+}
+
+function SideNav({ page, onNavigate }: SideNavProps): React.JSX.Element {
+  return (
+    <nav className="sidebar" data-tauri-drag-region>
+      <div className="nav-items">
+        {NAV_ITEMS.map((item) => (
+          <button
+            type="button"
+            key={item.key}
+            className={`nav-btn${page === item.key ? ' nav-btn--active' : ''}`}
+            onClick={() => {
+              onNavigate(item.key);
+            }}
+            title={item.label}
+            aria-label={item.label}
+          >
+            <Icon name={item.icon} size={24} />
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+interface TopbarTitleProps {
+  currentLabel: string;
+  page: PageKey;
+  queryTitleParts: { yearSeason: string; count: number } | null;
+}
+
+function TopbarTitle({ currentLabel, page, queryTitleParts }: TopbarTitleProps): React.JSX.Element {
+  return (
+    <span className="topbar-title">
+      MikanBox - {currentLabel}
+      {page === 'query' && queryTitleParts !== null && (
+        <>
+          {' '}
+          - <span className="topbar-highlight">{queryTitleParts.yearSeason}</span>番剧共
+          <span className="topbar-highlight">{queryTitleParts.count}</span>部
+        </>
+      )}
+    </span>
+  );
+}
+
+function WindowControls(): React.JSX.Element {
+  return (
+    <div className="topbar-controls">
+      <Button
+        type="primary"
+        size="small"
+        onClick={() => {
+          void appWindow.minimize();
+        }}
+      >
+        -
+      </Button>
+      <Button
+        type="primary"
+        size="small"
+        onClick={() => {
+          void appWindow.close();
+        }}
+      >
+        X
+      </Button>
+    </div>
+  );
+}
+
+export default function App(): React.JSX.Element {
   return (
     <DownloadProvider>
       <AppInner />
@@ -53,7 +190,7 @@ export default function App() {
   );
 }
 
-function AppInner() {
+function AppInner(): React.JSX.Element {
   const [page, setPage] = useState<PageKey>('query');
   const [isQueryLoading, setIsQueryLoading] = useState(false);
   const [queryTitleParts, setQueryTitleParts] = useState<{
@@ -62,85 +199,37 @@ function AppInner() {
   } | null>(null);
   const queryCancelRef = useRef<(() => void) | null>(null);
 
-  function handleQueryCancel() {
+  function handleQueryCancel(): void {
     queryCancelRef.current?.();
   }
 
-  const currentLabel = NAV_ITEMS.find((item) => item.key === page)!.label;
+  const currentLabel = NAV_ITEMS.find((item) => item.key === page)?.label ?? '';
 
   return (
     <>
-      {isQueryLoading && page === 'query' && (
-        <div className="query-loading-overlay">
-          <button className="query-loading-cancel" onClick={handleQueryCancel} title="取消搜索">
-            ✕
-          </button>
-          <LoadingTimer />
-          <Loading active className="query-loading-inner" />
-        </div>
-      )}
+      {isQueryLoading && page === 'query' && <LoadingOverlay onCancel={handleQueryCancel} />}
       <div className="app-shell">
         <header className="topbar" data-tauri-drag-region>
-          <div className="topbar-controls">
-            <Button type="primary" size="small" onClick={() => appWindow.minimize()}>
-              -
-            </Button>
-            <Button type="primary" size="small" onClick={() => appWindow.close()}>
-              X
-            </Button>
-          </div>
-          <span className="topbar-title">
-            MikanBox - {currentLabel}
-            {page === 'query' && queryTitleParts && (
-              <>
-                {' '}
-                - <span className="topbar-highlight">{queryTitleParts.yearSeason}</span>番剧共
-                <span className="topbar-highlight">{queryTitleParts.count}</span>部
-              </>
-            )}
-          </span>
+          <WindowControls />
+          <TopbarTitle currentLabel={currentLabel} page={page} queryTitleParts={queryTitleParts} />
         </header>
         <div className="app-body">
-          <nav className="sidebar" data-tauri-drag-region>
-            <div className="nav-items">
-              {NAV_ITEMS.map((item) => (
-                <button
-                  key={item.key}
-                  className={`nav-btn${page === item.key ? ' nav-btn--active' : ''}`}
-                  onClick={() => setPage(item.key)}
-                  title={item.label}
-                >
-                  <Icon name={item.icon} size={24} />
-                </button>
-              ))}
-            </div>
-          </nav>
+          <SideNav page={page} onNavigate={setPage} />
           <main className="main-content">
-            {NAV_ITEMS.map((item) => {
-              const PageComponent = PAGE_COMPONENTS[item.key];
-              return (
-                <div
-                  key={item.key}
-                  className={`page-container${page === item.key ? ' page-container--active' : ''}`}
-                >
-                  {item.key === 'query' ? (
-                    <QueryPage
-                      onLoadingChange={setIsQueryLoading}
-                      cancelRef={queryCancelRef}
-                      onTitleChange={setQueryTitleParts}
-                    />
-                  ) : item.key === 'watching' ? (
-                    <WatchingPage isActive={page === 'watching'} />
-                  ) : item.key === 'backlog' ? (
-                    <BacklogPage isActive={page === 'backlog'} />
-                  ) : item.key === 'finished' ? (
-                    <FinishedPage isActive={page === 'finished'} />
-                  ) : (
-                    <PageComponent />
-                  )}
-                </div>
-              );
-            })}
+            {NAV_ITEMS.map((item) => (
+              <div
+                key={item.key}
+                className={`page-container${page === item.key ? ' page-container--active' : ''}`}
+              >
+                <PageContent
+                  itemKey={item.key}
+                  page={page}
+                  onLoadingChange={setIsQueryLoading}
+                  cancelRef={queryCancelRef}
+                  onTitleChange={setQueryTitleParts}
+                />
+              </div>
+            ))}
           </main>
         </div>
       </div>

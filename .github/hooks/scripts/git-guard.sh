@@ -8,13 +8,13 @@ set -euo pipefail
 # python3 是本脚本的硬性依赖；缺失时 fall-back 到保守 ask 而非静默失效
 emit_conservative_ask() {
   local reason="${1:-python3 is required by git-guard.sh but is unavailable or invalid}"
-  local escaped_reason="$reason"
+  local escaped_reason="${reason}"
   escaped_reason=${escaped_reason//\\/\\\\}
   escaped_reason=${escaped_reason//\"/\\\"}
   escaped_reason=${escaped_reason//$'\n'/\\n}
   escaped_reason=${escaped_reason//$'\r'/\\r}
   escaped_reason=${escaped_reason//$'\t'/\\t}
-  printf '%s\n' "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"$escaped_reason\"}}"
+  printf '%s\n' "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"${escaped_reason}\"}}"
   exit 0
 }
 
@@ -29,7 +29,7 @@ fi
 INPUT=$(cat)
 
 # 提取 toolName 和 command（兼容解析失败的情况）
-TOOL_NAME=$(printf '%s' "$INPUT" | python3 -c "
+TOOL_NAME=$(printf '%s' "${INPUT}" | python3 -c "
 import sys, json
 try:
     d = json.load(sys.stdin)
@@ -38,7 +38,7 @@ except Exception:
     print('')
 " 2>/dev/null || echo "")
 
-COMMAND=$(printf '%s' "$INPUT" | python3 -c "
+COMMAND=$(printf '%s' "${INPUT}" | python3 -c "
 import sys, json
 try:
     d = json.load(sys.stdin)
@@ -48,12 +48,12 @@ except Exception:
 " 2>/dev/null || echo "")
 
 # ── 分支 1：run_in_terminal（git / gh CLI）────────────────────────────────────
-if [ "$TOOL_NAME" = "run_in_terminal" ]; then
+if [[ "${TOOL_NAME}" = "run_in_terminal" ]]; then
 
   # 将命令按 shell 操作符（&&、||、;、|、换行）拆分为独立片段，逐段检测
   # 用 shlex 分词后跳过 git/gh 全局选项，再检测子命令，防止通过
   # git -C <dir> commit 或 gh -R owner/repo pr merge 等方式绕过拦截
-  REASON=$(COMMAND="$COMMAND" python3 -c "
+  REASON=$(COMMAND="${COMMAND}" python3 -c "
 import os, re, shlex, sys
 
 def fail_closed_on_unhandled_exception(exc_type, exc, tb):
@@ -293,13 +293,13 @@ for seg_tokens in split_shell_segments(cmd):
         inspect_tokens(toks)
 " 2>/dev/null)
 
-  [ -z "$REASON" ] && exit 0
+  [[ -z "${REASON}" ]] && exit 0
 
 # ── 分支 2：GitHub MCP 写操作 ──────────────────────────────────────────────────
-elif printf '%s' "$TOOL_NAME" | grep -qiE '^mcp_github_((create|merge|push|update)_.+|fork_repository|add_issue_comment)$'; then
+elif printf '%s' "${TOOL_NAME}" | grep -qiE '^mcp_github_((create|merge|push|update)_.+|fork_repository|add_issue_comment)$'; then
 
   # 提取关键参数作为摘要展示
-  COMMAND=$(printf '%s' "$INPUT" | python3 -c "
+  COMMAND=$(printf '%s' "${INPUT}" | python3 -c "
 import sys, json
 try:
     d = json.load(sys.stdin)
@@ -311,13 +311,13 @@ except Exception:
     print('(解析失败)')
 " 2>/dev/null || echo "(解析失败)")
 
-  REASON="GitHub MCP 写操作: $TOOL_NAME"
+  REASON="GitHub MCP 写操作: ${TOOL_NAME}"
 
 else
   exit 0
 fi
 
-REASON="$REASON" COMMAND="$COMMAND" python3 -c "
+REASON="${REASON}" COMMAND="${COMMAND}" python3 -c "
 import json, os
 reason = os.environ.get('REASON', '')
 command = os.environ.get('COMMAND', '')

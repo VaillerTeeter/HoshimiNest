@@ -74,8 +74,8 @@ remove_nested_parens = true
 
 # ── 尾随符号 ─────────────────────────────────────────
 
-# 多行结构体/枚举/函数参数末尾保留逗号（Always 比 Vertical 更严格）
-trailing_comma = "Always"
+# 多行结构体/枚举/函数参数末尾不加逗号
+trailing_comma = "Never"
 
 # [nightly] 语句末尾保留分号
 trailing_semicolon = true

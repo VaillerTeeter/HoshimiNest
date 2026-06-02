@@ -97,6 +97,7 @@ GET https://reactbits.dev/r/<ComponentName>-TS-CSS.json
 ```
 
 The response contains:
+
 - `files[].content` — the full TypeScript source to copy
 - `dependencies` — the exact npm packages required
 

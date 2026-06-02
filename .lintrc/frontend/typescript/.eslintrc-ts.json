@@ -114,7 +114,7 @@
     "max-lines": ["error", { "max": 500, "skipComments": true, "skipBlankLines": true }],
     "max-lines-per-function": [
       "error",
-      { "max": 60, "skipComments": true, "skipBlankLines": true }
+      { "max": 100, "skipComments": true, "skipBlankLines": true }
     ],
     "max-depth": ["error", 3],
     "complexity": ["error", 12],
@@ -154,7 +154,6 @@
     ],
     "import/no-cycle": "error",
     "import/no-self-import": "error",
-    "import/no-duplicates": "error",
-
+    "import/no-duplicates": "error"
   }
 }

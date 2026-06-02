@@ -266,7 +266,7 @@
 
 - 使用英语词典（`en_US`）+ 软件术语、TypeScript、Node.js、npm、bash、git 等专业词典
 - 自定义词汇（`words[]`）：随项目开发逐步填入（Tauri、Bangumi 领域词汇、组件名等）
-- `flagWords`：常见笔误（`teh`、`recieve` 等）触发报错
+- `flagWords`：常见笔误（`teh`、`recieve` 等）触发报错 <!-- cspell:ignore teh recieve -->
 - `minWordLength: 4`，不检测 3 字符以下的单词
 
 ---

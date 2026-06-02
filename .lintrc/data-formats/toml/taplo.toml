@@ -48,13 +48,13 @@ enabled = true
 
 # 关联已知 TOML 文件的 Schema
 [[rule]]
-name = "Cargo.toml"
-include = ["**/Cargo.toml"]
+name    = "Cargo.toml"
+include = [ "**/Cargo.toml" ]
 
 [[rule]]
-name = "Cargo.lock"
-include = ["**/Cargo.lock"]
+name    = "Cargo.lock"
+include = [ "**/Cargo.lock" ]
 
 [[rule]]
-name = "taplo.toml"
-include = ["taplo.toml", ".taplo.toml"]
+name    = "taplo.toml"
+include = [ "taplo.toml", ".taplo.toml" ]
