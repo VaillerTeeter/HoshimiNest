@@ -154,7 +154,6 @@
     ],
     "import/no-cycle": "error",
     "import/no-self-import": "error",
-    "import/no-duplicates": "error",
-
+    "import/no-duplicates": "error"
   }
 }

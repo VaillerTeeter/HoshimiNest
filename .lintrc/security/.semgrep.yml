@@ -82,7 +82,7 @@ rules:
   - id: rust-hardcoded-credentials
     pattern-either:
       - pattern: let password = "..."
-      - pattern: const PASSWORD: &str = "..."
+      - pattern: 'const PASSWORD: &str = "..."'
       - pattern: let secret = "..."
       - pattern: let api_key = "..."
       - pattern: let access_token = "..."
@@ -158,8 +158,8 @@ rules:
     pattern-either:
       - pattern: eval($X)
       - pattern: new Function($X)
-      - pattern: setTimeout($X, $T)
-      - pattern: setInterval($X, $T)
+      - pattern: setTimeout("...", $T)
+      - pattern: setInterval("...", $T)
     message: "Avoid eval(), new Function(), and string-based setTimeout/setInterval — potential code injection."
     languages: [javascript, typescript]
     severity: ERROR
@@ -284,9 +284,9 @@ rules:
 
   - id: weak-jwt-algorithm
     pattern-either:
-      - pattern: jwt.sign($PAYLOAD, $SECRET, { algorithm: "HS256" })
-      - pattern: jwt.sign($PAYLOAD, $SECRET, { algorithm: "HS384" })
-      - pattern: jwt.sign($PAYLOAD, $SECRET, { algorithm: "none" })
+      - pattern: 'jwt.sign($PAYLOAD, $SECRET, { algorithm: "HS256" })'
+      - pattern: 'jwt.sign($PAYLOAD, $SECRET, { algorithm: "HS384" })'
+      - pattern: 'jwt.sign($PAYLOAD, $SECRET, { algorithm: "none" })'
     message: "Weak or insecure JWT algorithm. Prefer RS256/ES256 (asymmetric) over symmetric HMAC or 'none'."
     languages: [javascript, typescript]
     severity: ERROR

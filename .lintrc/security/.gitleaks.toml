@@ -5,18 +5,18 @@ title = "gitleaks config"
 useDefault = true
 
 [[rules]]
-id = "generic-api-key"
+id          = "generic-api-key"
 description = "Generic API Key Pattern"
-regex = '''(?i)(api[_-]?key|apikey|api[_-]?token)\s*[:=]\s*['"]?[0-9a-zA-Z\-_.]{20,}'''
-tags = ["api-key", "generic"]
-severity = "HIGH"
+regex       = '''(?i)(api[_-]?key|apikey|api[_-]?token)\s*[:=]\s*['"]?[0-9a-zA-Z\-_.]{20,}'''
+tags        = [ "api-key", "generic" ]
+severity    = "HIGH"
 
 [[rules]]
-id = "generic-secret"
+id          = "generic-secret"
 description = "Generic Secret Pattern"
-regex = '''(?i)(secret|passwd|password)\s*[:=]\s*['"][^'"]{8,}['"]'''
-tags = ["secret", "generic"]
-severity = "HIGH"
+regex       = '''(?i)(secret|passwd|password)\s*[:=]\s*['"][^'"]{8,}['"]'''
+tags        = [ "secret", "generic" ]
+severity    = "HIGH"
 
 [allowlist]
 description = "Global allowlist"

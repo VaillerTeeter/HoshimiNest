@@ -172,7 +172,7 @@ echo '{"toolName":"run_in_terminal","toolInput":{"command":"npm install"}}' \
 ## 平台说明
 
 | 平台 | 脚本 | 依赖 |
-|---|---|---|
+| --- | --- | --- |
 | Linux / macOS | `git-guard.sh` | `bash` + `python3` |
 | Windows | `git-guard.py` | Python 3.6+（`python` 命令） |
 

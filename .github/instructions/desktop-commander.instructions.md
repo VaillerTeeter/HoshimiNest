@@ -39,6 +39,7 @@ Always use `edit_block` for targeted changes. NEVER rewrite an entire file when 
 <!-- edit_block 只发送差异片段，全文件重写会消耗大量 token -->
 
 `edit_block` format:
+
 ```text
 filepath.ext
 <<<<<<< SEARCH

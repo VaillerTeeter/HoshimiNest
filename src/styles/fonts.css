@@ -4,8 +4,8 @@
    ───────────────────────────────────────────────── */
 @font-face {
   font-family: 'ZCOOL KuaiLe';
-  src: url('../assets/fonts/ZCOOLKuaiLe-Regular.ttf') format('truetype');
-  font-weight: 400;
   font-style: normal;
+  font-weight: 400;
+  src: url('../assets/fonts/ZCOOLKuaiLe-Regular.ttf') format('truetype');
   font-display: swap;
 }

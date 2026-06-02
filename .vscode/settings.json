@@ -228,5 +228,8 @@
     "editor.formatOnSave": true
   },
   // 保存时运行 clippy 检查（比默认 cargo check 更严格）
-  "rust-analyzer.check.command": "clippy"
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.rustfmt.overrideCommand": [
+    "rustfmt", "+nightly", "--config-path", ".lintrc/backend/rust/rustfmt.toml", "--edition", "2021"
+  ]
 }

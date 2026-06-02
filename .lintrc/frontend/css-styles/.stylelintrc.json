@@ -72,5 +72,16 @@
       "s", "ms",
       "pt", "pc", "cm", "mm", "in"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/App.css"],
+      "rules": {
+        "selector-max-universal": 1,
+        "selector-max-compound-selectors": 4,
+        "selector-max-specificity": "0,4,1",
+        "declaration-no-important": null
+      }
+    }
+  ]
 }
