@@ -48,10 +48,10 @@ export const REGIONS = [
 export const AUDIENCES = ['BL', 'GL', '子供向', '女性向', '少女向', '少年向', '青年向'];
 
 const ALL_SEASONS = [
-  { key: 'winter', label: '冬' },
-  { key: 'spring', label: '春' },
-  { key: 'summer', label: '夏' },
-  { key: 'autumn', label: '秋' },
+  { key: 'winter', label: '　　冬　　' },
+  { key: 'spring', label: '　　春　　' },
+  { key: 'summer', label: '　　夏　　' },
+  { key: 'autumn', label: '　　秋　　' },
 ] as const;
 
 export type SeasonKey = (typeof ALL_SEASONS)[number]['key'];
