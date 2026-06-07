@@ -1,6 +1,5 @@
 import { Divider } from 'animal-island-ui';
 import type { Episode, Subject } from 'bangumi-api-client';
-import type { JSX } from 'react';
 
 import type { WatchStatus } from '../../store/watchStore';
 
@@ -16,7 +15,7 @@ function WatchStatusButtons({
   itemId,
   currentStatus,
   onWatchChange,
-}: WatchStatusButtonsProps): JSX.Element {
+}: WatchStatusButtonsProps): React.JSX.Element {
   return (
     <div className="query-detail-watch-status">
       {(['无状态', '正在追番', '补番计划', '已完番剧'] as const).map((label) => (
@@ -48,7 +47,7 @@ interface DetailTagsProps {
   detailTags: string[];
 }
 
-function DetailTags({ hasDate, date, detailTags }: DetailTagsProps): JSX.Element {
+function DetailTags({ hasDate, date, detailTags }: DetailTagsProps): React.JSX.Element {
   return (
     <div className="query-detail-tags">
       {hasDate && <span className="query-detail-tag query-detail-tag--date">{date}</span>}
@@ -61,7 +60,7 @@ function DetailTags({ hasDate, date, detailTags }: DetailTagsProps): JSX.Element
   );
 }
 
-function SubjectTitle({ mainTitle, item }: SubjectTitleProps): JSX.Element {
+function SubjectTitle({ mainTitle, item }: SubjectTitleProps): React.JSX.Element {
   return (
     <>
       <h2 className="query-detail-main-title">{mainTitle}</h2>
@@ -133,7 +132,7 @@ function calcAired(ep: Episode, itemDate: string | undefined): boolean {
   return itemDate !== undefined && itemDate !== '' && itemDate <= todayStr;
 }
 
-function EpisodePill({ ep, itemDate }: EpisodePillProps): JSX.Element {
+function EpisodePill({ ep, itemDate }: EpisodePillProps): React.JSX.Element {
   const aired = calcAired(ep, itemDate);
   const prefix = TYPE_PREFIX[ep.type] ?? '';
   const num = ep.sort % 1 === 0 ? String(ep.sort) : ep.sort.toFixed(1);
@@ -157,7 +156,11 @@ interface EpisodeRowProps {
   itemDate: string | undefined;
 }
 
-function EpisodeRow({ episodes, episodesLoading, itemDate }: EpisodeRowProps): JSX.Element | null {
+function EpisodeRow({
+  episodes,
+  episodesLoading,
+  itemDate,
+}: EpisodeRowProps): React.JSX.Element | null {
   if (episodes.length === 0 && !episodesLoading) {
     return null;
   }
@@ -185,7 +188,7 @@ function DetailLinks({
   personLabel,
   onShowCharacters,
   onShowPersons,
-}: DetailLinksProps): JSX.Element {
+}: DetailLinksProps): React.JSX.Element {
   return (
     <div className="query-detail-links">
       <button type="button" className="query-detail-link-btn" onClick={onShowCharacters}>
@@ -210,7 +213,7 @@ export function SubjectDetail({
   onWatchChange,
   onShowCharacters,
   onShowPersons,
-}: SubjectDetailProps): JSX.Element {
+}: SubjectDetailProps): React.JSX.Element {
   const detailTags = buildDetailTags(item);
   const currentStatus = watchStatus[item.id] ?? '无状态';
   const mainTitle = item.name_cn === '' ? item.name : item.name_cn;

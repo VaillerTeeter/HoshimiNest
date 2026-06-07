@@ -1,5 +1,4 @@
 import type { Episode } from 'bangumi-api-client';
-import type { JSX } from 'react';
 
 import { todayStr, TYPE_PREFIX } from './constants';
 
@@ -32,7 +31,7 @@ export function EpisodePills({
   episodes,
   loading,
   selectedItemDate,
-}: EpisodePillsProps): JSX.Element | null {
+}: EpisodePillsProps): React.JSX.Element | null {
   if (episodes.length === 0 && !loading) {
     return null;
   }

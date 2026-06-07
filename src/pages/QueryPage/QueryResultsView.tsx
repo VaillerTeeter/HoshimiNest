@@ -1,6 +1,6 @@
 import { Button, Divider } from 'animal-island-ui';
 import type { Episode, RelatedCharacter, RelatedPerson, Subject } from 'bangumi-api-client';
-import { type JSX, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 import type { WatchStatus } from '../../store/watchStore';
 
@@ -37,7 +37,7 @@ function SubjectDetailPanel({
   personsLoading,
   watchStatus,
   onWatchChange,
-}: SubjectDetailPanelProps): JSX.Element {
+}: SubjectDetailPanelProps): React.JSX.Element {
   const [showCharacters, setShowCharacters] = useState(false);
   const [showPersons, setShowPersons] = useState(false);
 
@@ -89,7 +89,7 @@ interface QueryFiltersProps {
   monthFilterOptions: Array<{ value: string; label: string }>;
 }
 
-function QueryFilters({ filterState, monthFilterOptions }: QueryFiltersProps): JSX.Element {
+function QueryFilters({ filterState, monthFilterOptions }: QueryFiltersProps): React.JSX.Element {
   const {
     filterMonths,
     setFilterMonths,
@@ -166,7 +166,7 @@ export function QueryResultsView({
   monthFilterOptions,
   onBack,
   onWatchChange,
-}: QueryResultsViewProps): JSX.Element {
+}: QueryResultsViewProps): React.JSX.Element {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const { episodes, episodesLoading } = useEpisodes(selectedId);
   const { characters, charactersLoading } = useCharacters(selectedId);

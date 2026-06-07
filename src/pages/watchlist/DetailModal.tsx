@@ -1,6 +1,5 @@
 import { Divider, Modal } from 'animal-island-ui';
 import type { Episode, RelatedCharacter, RelatedPerson, Subject } from 'bangumi-api-client';
-import type { JSX } from 'react';
 
 import type { WatchStatus } from '../../store/watchStore';
 
@@ -56,7 +55,7 @@ function WatchStatusButtons({
 }: {
   currentStatus: WatchStatus | '无状态';
   onChange: (label: WatchStatus | '无状态') => void;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <div className="query-detail-watch-status">
       {WATCH_STATUS_LABELS.map((label) => (
@@ -77,7 +76,13 @@ function WatchStatusButtons({
 
 // ── DetailTags ─────────────────────────────────────────────────────────────
 
-function DetailTags({ date, tags }: { date: string | undefined; tags: string[] }): JSX.Element {
+function DetailTags({
+  date,
+  tags,
+}: {
+  date: string | undefined;
+  tags: string[];
+}): React.JSX.Element {
   return (
     <div className="query-detail-tags">
       {date !== '' && date !== undefined && (
@@ -107,7 +112,7 @@ function DetailCore({
   onWatchStatusChange,
   onShowCharacters,
   onShowPersons,
-}: DetailCoreProps): JSX.Element {
+}: DetailCoreProps): React.JSX.Element {
   const title = selectedItem.name_cn === '' ? selectedItem.name : selectedItem.name_cn;
   const coverSrc =
     selectedItem.images.large === '' ? selectedItem.images.medium : selectedItem.images.large;
@@ -159,7 +164,7 @@ export function DetailModal({
   selectedItem,
   onClose,
   ...rest
-}: DetailModalProps): JSX.Element | null {
+}: DetailModalProps): React.JSX.Element | null {
   if (selectedItem === null) {
     return null;
   }

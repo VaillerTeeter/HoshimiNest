@@ -1,6 +1,6 @@
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { Table, type TableColumn } from 'animal-island-ui';
-import { type JSX, type MouseEvent, useCallback, useRef, useState } from 'react';
+import { type MouseEvent, useCallback, useRef, useState } from 'react';
 
 import { useDownload } from '../../store/downloadStore';
 
@@ -26,7 +26,7 @@ const MAGNET_ICON = (
   </svg>
 );
 
-function MagnetBtn({ magnet, name }: { magnet: string; name: string }): JSX.Element {
+function MagnetBtn({ magnet, name }: { magnet: string; name: string }): React.JSX.Element {
   const { addTask } = useDownload();
   const [toasts, setToasts] = useState<FloatToast[]>([]);
   const idRef = useRef(0);
@@ -76,7 +76,7 @@ function MagnetBtn({ magnet, name }: { magnet: string; name: string }): JSX.Elem
   );
 }
 
-function renderMagnet(v: unknown, record: unknown): JSX.Element | string {
+function renderMagnet(v: unknown, record: unknown): React.JSX.Element | string {
   if (typeof v !== 'string' || v === '') {
     return '—';
   }
@@ -137,7 +137,7 @@ interface SearchResultsTableProps {
 export function SearchResultsTable({
   searching,
   searchResults,
-}: SearchResultsTableProps): JSX.Element | null {
+}: SearchResultsTableProps): React.JSX.Element | null {
   if (!searching && searchResults.length === 0) {
     return null;
   }

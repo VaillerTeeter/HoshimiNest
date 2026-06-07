@@ -1,6 +1,5 @@
 import { Modal } from 'animal-island-ui';
 import type { RelatedCharacter } from 'bangumi-api-client';
-import type { JSX } from 'react';
 
 interface CharactersModalProps {
   open: boolean;
@@ -14,7 +13,7 @@ export function CharactersModal({
   characters,
   loading,
   onClose,
-}: CharactersModalProps): JSX.Element {
+}: CharactersModalProps): React.JSX.Element {
   return (
     <Modal
       open={open}

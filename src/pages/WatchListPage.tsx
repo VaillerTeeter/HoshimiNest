@@ -1,5 +1,3 @@
-import type { JSX } from 'react';
-
 import { CharactersModal } from './watchlist/CharactersModal';
 import { DetailModal } from './watchlist/DetailModal';
 import {
@@ -13,7 +11,7 @@ import { useWatchListPage } from './watchlist/useWatchListPage';
 
 type HookResult = ReturnType<typeof useWatchListPage>;
 
-function buildModals(r: HookResult): JSX.Element {
+function buildModals(r: HookResult): React.JSX.Element {
   return (
     <>
       <CharactersModal
@@ -36,7 +34,7 @@ function buildModals(r: HookResult): JSX.Element {
   );
 }
 
-function buildDetail(r: HookResult): JSX.Element {
+function buildDetail(r: HookResult): React.JSX.Element {
   return (
     <DetailModal
       selectedItem={r.selectedItem}
@@ -66,7 +64,7 @@ export default function WatchListPage({
   status,
   isActive,
   layout = 'list',
-}: WatchListPageProps): JSX.Element {
+}: WatchListPageProps): React.JSX.Element {
   const r = useWatchListPage(status, isActive, layout);
   if (r.subjects.length === 0 && !r.refreshing) {
     return (
@@ -117,7 +115,7 @@ function GridOrWeekdayLayout({
 }: {
   r: HookResult;
   layout: 'weekday' | 'grid';
-}): JSX.Element {
+}): React.JSX.Element {
   const common = {
     subjects: r.subjects,
     refreshing: r.refreshing,

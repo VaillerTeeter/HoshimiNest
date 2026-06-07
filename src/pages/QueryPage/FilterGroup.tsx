@@ -1,5 +1,3 @@
-import type { JSX } from 'react';
-
 interface FilterOption {
   value: string;
   label: string;
@@ -12,7 +10,12 @@ interface FilterGroupProps {
   onChange: (next: Set<string>) => void;
 }
 
-export function FilterGroup({ label, options, selected, onChange }: FilterGroupProps): JSX.Element {
+export function FilterGroup({
+  label,
+  options,
+  selected,
+  onChange,
+}: FilterGroupProps): React.JSX.Element {
   const allActive = selected.size === 0;
 
   function toggle(value: string): void {

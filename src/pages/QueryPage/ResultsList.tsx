@@ -1,5 +1,4 @@
 import type { Subject } from 'bangumi-api-client';
-import type { JSX } from 'react';
 
 interface ResultsListProps {
   results: Subject[];
@@ -13,7 +12,7 @@ export function ResultsList({
   selectedId,
   searchError,
   onSelect,
-}: ResultsListProps): JSX.Element {
+}: ResultsListProps): React.JSX.Element {
   return (
     <div className="query-results-left">
       {searchError !== null && <p className="query-error">{searchError}</p>}

@@ -1,5 +1,3 @@
-import type { JSX } from 'react';
-
 import { QueryResultsView } from './QueryPage/QueryResultsView';
 import { QuerySearchView } from './QueryPage/QuerySearchView';
 import { type SeasonKey, getAvailableSeasons, seasonToMonths } from './QueryPage/queryHelpers';
@@ -21,7 +19,7 @@ export default function QueryPage({
   onLoadingChange,
   cancelRef,
   onTitleChange,
-}: QueryPageProps): JSX.Element {
+}: QueryPageProps): React.JSX.Element {
   const { year, season, setSeason, handleYearChange } = useYearSeason();
   const { isLoading, results, searchError, setResults, setSearchError, handleSearch } =
     useQuerySearch(year, season, onLoadingChange, cancelRef);

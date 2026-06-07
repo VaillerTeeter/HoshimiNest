@@ -1,12 +1,11 @@
 import type { Subject } from 'bangumi-api-client';
-import type { JSX } from 'react';
 
 interface SubjectCardProps {
   item: Subject;
   onClick: () => void;
 }
 
-export function SubjectCard({ item, onClick }: SubjectCardProps): JSX.Element {
+export function SubjectCard({ item, onClick }: SubjectCardProps): React.JSX.Element {
   return (
     <button type="button" className="finished-card" onClick={onClick}>
       <div className="finished-card-cover">

@@ -1,5 +1,3 @@
-import type { JSX } from 'react';
-
 import { FilePanel } from './tracks/FilePanel';
 import { JOB_STATUS_CN, JOB_STATUS_ICON } from './tracks/constants';
 import type { MergeJob } from './tracks/types';
@@ -37,7 +35,7 @@ function QueueItem({
   progress,
   onLoad,
   onRemove,
-}: QueueItemProps): JSX.Element {
+}: QueueItemProps): React.JSX.Element {
   const cls = [
     'tw-job-item',
     editingJobId === job.id ? 'tw-job-item--active' : '',
@@ -97,7 +95,7 @@ function QueueList({
   progress,
   onLoad,
   onRemove,
-}: QueueListProps): JSX.Element {
+}: QueueListProps): React.JSX.Element {
   if (jobs.length === 0) {
     return <div className="tw-queue-empty">尚无任务</div>;
   }
@@ -132,7 +130,7 @@ function SubmitButtons({
   onCancelEdit,
   onUpdateJob,
   onAddToQueue,
-}: SubmitButtonsProps): JSX.Element {
+}: SubmitButtonsProps): React.JSX.Element {
   if (editingJobId === null) {
     return (
       <button
@@ -184,7 +182,7 @@ function OutputPanel({
   onCancelEdit,
   onUpdateJob,
   onAddToQueue,
-}: OutputPanelProps): JSX.Element {
+}: OutputPanelProps): React.JSX.Element {
   const title =
     editingJobId === null
       ? '新建任务'
@@ -248,7 +246,7 @@ function QueuePanel({
   onRemoveJob,
   onClearQueue,
   onStartQueue,
-}: QueuePanelProps): JSX.Element {
+}: QueuePanelProps): React.JSX.Element {
   return (
     <div className="tw-queue">
       <div className="tw-queue-header">
@@ -302,7 +300,7 @@ function FilePanelsRow({
   pickFile,
   updateTrack,
   moveTrack,
-}: FilePanelsRowProps): JSX.Element {
+}: FilePanelsRowProps): React.JSX.Element {
   return (
     <div className="tw-panels">
       <FilePanel
@@ -368,7 +366,7 @@ function EditorPanel({
   cancelEdit,
   updateJob,
   addToQueue,
-}: EditorPanelProps): JSX.Element {
+}: EditorPanelProps): React.JSX.Element {
   return (
     <div className="tw-editor">
       <FilePanelsRow
@@ -395,7 +393,7 @@ function EditorPanel({
   );
 }
 
-export default function TracksPage(): JSX.Element {
+export default function TracksPage(): React.JSX.Element {
   const {
     jobs,
     editingJobId,

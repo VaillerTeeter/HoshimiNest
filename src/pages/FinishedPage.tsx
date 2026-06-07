@@ -1,5 +1,5 @@
 import { createBangumiClient, type Subject } from 'bangumi-api-client';
-import { useEffect, useMemo, useReducer, useState, type JSX, type Dispatch } from 'react';
+import { useEffect, useMemo, useReducer, useState, type Dispatch } from 'react';
 
 import {
   type WatchStatus,
@@ -203,7 +203,7 @@ function useFinishedRefresh(isActive: boolean | undefined): RefreshResult {
   };
 }
 
-export default function FinishedPage({ isActive }: Props): JSX.Element {
+export default function FinishedPage({ isActive }: Props): React.JSX.Element {
   const [selectedItem, setSelectedItem] = useState<Subject | null>(null);
   const { sorted, refreshing, watchStatus, handleStatusChange, handleRemove } =
     useFinishedRefresh(isActive);

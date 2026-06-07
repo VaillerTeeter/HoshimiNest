@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { useState, type JSX } from 'react';
+import { useState } from 'react';
 
 import { useDownload, type TaskStatus, type DownloadTask } from '../store/downloadStore';
 
@@ -29,7 +29,7 @@ interface ProgressBarProps {
   speed?: string;
 }
 
-function ProgressBar({ value, status, speed }: ProgressBarProps): JSX.Element {
+function ProgressBar({ value, status, speed }: ProgressBarProps): React.JSX.Element {
   const cls = PROGRESS_BAR_CLASS.get(status) ?? '';
   const indeterminate = speed !== undefined && speed.length > 0 && INDETERMINATE_SPEEDS.has(speed);
   const barStyle = indeterminate ? {} : { width: `${String(value)}%` };
@@ -52,7 +52,7 @@ const STATUS_BADGE_CLASS = new Map<TaskStatus, string>([
   ['已取消', 'dl-badge--cancelled'],
 ]);
 
-function StatusBadge({ status }: { status: TaskStatus }): JSX.Element {
+function StatusBadge({ status }: { status: TaskStatus }): React.JSX.Element {
   const cls = STATUS_BADGE_CLASS.get(status) ?? '';
   return <span className={`dl-badge ${cls}`}>{status}</span>;
 }
@@ -63,7 +63,7 @@ interface DiagRowProps {
   task: DownloadTask;
 }
 
-function DiagRow({ task }: DiagRowProps): JSX.Element {
+function DiagRow({ task }: DiagRowProps): React.JSX.Element {
   const phase = task.phase ?? (task.status === '下载中' ? '连接中' : task.status);
   return (
     <div className="dl-diag-row">
@@ -80,7 +80,7 @@ interface SpeedDisplayProps {
   speed: string;
 }
 
-function SpeedDisplay({ speed }: SpeedDisplayProps): JSX.Element {
+function SpeedDisplay({ speed }: SpeedDisplayProps): React.JSX.Element {
   const isResolving = speed === '正在解析元数据…' || speed === '正在校验文件完整性…';
   return (
     <>
@@ -109,7 +109,7 @@ function PauseResumeButtons({
   onPause,
   onResume,
   onRestart,
-}: Omit<ActiveButtonsProps, 'onCancel'>): JSX.Element {
+}: Omit<ActiveButtonsProps, 'onCancel'>): React.JSX.Element {
   return (
     <>
       {status === '下载中' && (
@@ -162,7 +162,7 @@ function ActiveButtons({
   onResume,
   onCancel,
   onRestart,
-}: ActiveButtonsProps): JSX.Element {
+}: ActiveButtonsProps): React.JSX.Element {
   const showCancel = status === '下载中' || status === '暂停';
   return (
     <>
@@ -206,7 +206,7 @@ function CardActions({
   onCancel,
   onRestart,
   onRemoveRecord,
-}: CardActionsProps): JSX.Element {
+}: CardActionsProps): React.JSX.Element {
   function handleReveal(): void {
     void invoke('reveal_in_folder', { path: task.saveDir });
   }
@@ -268,7 +268,7 @@ function TaskCard({
   onCancel,
   onRestart,
   onRemoveRecord,
-}: TaskCardProps): JSX.Element {
+}: TaskCardProps): React.JSX.Element {
   const isErrorCard = task.status === '错误' || task.status === '中断';
   return (
     <div className={`dl-card${isErrorCard ? ' dl-card--error' : ''}`}>
@@ -311,7 +311,7 @@ function TaskCard({
   );
 }
 
-export default function DownloadPage(): JSX.Element {
+export default function DownloadPage(): React.JSX.Element {
   const { tasks, pauseTask, resumeTask, cancelTask, restartTask, removeRecord } = useDownload();
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
 

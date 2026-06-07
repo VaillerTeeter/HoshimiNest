@@ -1,6 +1,6 @@
 import { Divider, Modal } from 'animal-island-ui';
 import type { Subject } from 'bangumi-api-client';
-import { type JSX, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { type WatchStatus, removeWatchEntry, setWatchEntry } from '../../store/watchStore';
 
@@ -20,7 +20,7 @@ interface WatchStatusButtonsProps {
 function WatchStatusButtons({
   currentStatus,
   onWatchStatusChange,
-}: WatchStatusButtonsProps): JSX.Element {
+}: WatchStatusButtonsProps): React.JSX.Element {
   return (
     <div className="query-detail-watch-status">
       {WATCH_STATUS_OPTIONS.map((label) => (
@@ -44,7 +44,7 @@ interface DetailTagsProps {
   detailTags: string[];
 }
 
-function DetailTags({ subject, detailTags }: DetailTagsProps): JSX.Element {
+function DetailTags({ subject, detailTags }: DetailTagsProps): React.JSX.Element {
   return (
     <div className="query-detail-tags">
       {(subject.date?.length ?? 0) > 0 && (
@@ -78,7 +78,7 @@ function PeopleLinks({
   persons,
   charactersLoading,
   personsLoading,
-}: PeopleLinksProps): JSX.Element {
+}: PeopleLinksProps): React.JSX.Element {
   const [showCharacters, setShowCharacters] = useState(false);
   const [showPersons, setShowPersons] = useState(false);
   const charCount = characters.length > 0 ? `（${String(characters.length)}）` : '';
@@ -132,7 +132,7 @@ function DetailModalContent({
   subject,
   watchStatus,
   onWatchStatusChange,
-}: Omit<DetailModalProps, 'onClose'>): JSX.Element {
+}: Omit<DetailModalProps, 'onClose'>): React.JSX.Element {
   const { episodes, loading: episodesLoading } = useEpisodes(subject.id);
   const { characters, loading: charactersLoading } = useCharacters(subject.id);
   const { persons, loading: personsLoading } = usePersons(subject.id);
@@ -189,7 +189,7 @@ export function DetailModal({
   onClose,
   onStatusChange,
   onRemove,
-}: DetailModalHandle): JSX.Element {
+}: DetailModalHandle): React.JSX.Element {
   function handleWatchStatusChange(label: WatchOption): void {
     if (label === '无状态') {
       removeWatchEntry(subject.id);

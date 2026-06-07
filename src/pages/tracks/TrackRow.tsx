@@ -1,5 +1,3 @@
-import type { JSX } from 'react';
-
 import { TRACK_ICON, TRACK_TYPE_CN } from './constants';
 import type { SelectedTrack } from './types';
 
@@ -21,7 +19,7 @@ export function TrackRow({
   onLabelChange,
   onMoveUp,
   onMoveDown,
-}: TrackRowProps): JSX.Element {
+}: TrackRowProps): React.JSX.Element {
   return (
     <div className={`tw-track${track.selected ? ' tw-track--selected' : ''}`}>
       <input

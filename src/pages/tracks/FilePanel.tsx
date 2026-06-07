@@ -1,5 +1,3 @@
-import type { JSX } from 'react';
-
 import { TrackRow } from './TrackRow';
 import type { FileState, SelectedTrack } from './types';
 
@@ -26,7 +24,7 @@ export function FilePanel({
   onUpdateTrack,
   onMoveTrack,
   loading = false,
-}: FilePanelProps): JSX.Element {
+}: FilePanelProps): React.JSX.Element {
   const label = side === 'a' ? 'A 版' : 'B 版';
   const hint = side === 'a' ? '取视频轨 + 音频轨' : '取字幕轨';
 

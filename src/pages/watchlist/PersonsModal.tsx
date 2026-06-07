@@ -1,6 +1,5 @@
 import { Modal } from 'animal-island-ui';
 import type { RelatedPerson } from 'bangumi-api-client';
-import type { JSX } from 'react';
 
 interface PersonsModalProps {
   open: boolean;
@@ -9,7 +8,12 @@ interface PersonsModalProps {
   onClose: () => void;
 }
 
-export function PersonsModal({ open, persons, loading, onClose }: PersonsModalProps): JSX.Element {
+export function PersonsModal({
+  open,
+  persons,
+  loading,
+  onClose,
+}: PersonsModalProps): React.JSX.Element {
   return (
     <Modal
       open={open}

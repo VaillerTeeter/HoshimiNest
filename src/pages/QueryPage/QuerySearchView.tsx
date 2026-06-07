@@ -1,9 +1,8 @@
 import { Select, Button } from 'animal-island-ui';
-import type { JSX } from 'react';
 
 import { type SeasonKey, YEAR_OPTIONS } from './queryHelpers';
 
-function SearchIcon(): JSX.Element {
+function SearchIcon(): React.JSX.Element {
   return (
     <svg width="16" height="16" viewBox="0 0 512 512" fill="currentColor">
       <path
@@ -35,7 +34,7 @@ export function QuerySearchView({
   onYearChange,
   onSeasonChange,
   onSearch,
-}: QuerySearchViewProps): JSX.Element {
+}: QuerySearchViewProps): React.JSX.Element {
   return (
     <>
       <div className="query-toolbar">

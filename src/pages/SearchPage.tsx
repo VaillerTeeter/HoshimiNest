@@ -1,4 +1,4 @@
-import type { JSX, KeyboardEvent } from 'react';
+import type { KeyboardEvent } from 'react';
 
 import { SearchResultsTable } from './SearchPage/SearchTable';
 import type { LogicOp, SearchTerm } from './SearchPage/types';
@@ -22,7 +22,7 @@ interface TermTagProps {
   onRemove: (id: number) => void;
 }
 
-function TermTag({ term, onRemove }: TermTagProps): JSX.Element {
+function TermTag({ term, onRemove }: TermTagProps): React.JSX.Element {
   return (
     <span className="search-tag">
       <span className="search-tag-op">{tagOpSymbol(term.op)}</span>
@@ -48,7 +48,7 @@ interface SavedChipProps {
   onRemove: (q: string) => void;
 }
 
-function SavedChip({ query, searching, onSearch, onRemove }: SavedChipProps): JSX.Element {
+function SavedChip({ query, searching, onSearch, onRemove }: SavedChipProps): React.JSX.Element {
   return (
     <span className="search-saved-chip">
       <button
@@ -79,7 +79,7 @@ interface LogicRowProps {
   toggleLogic: (op: LogicOp) => void;
 }
 
-function LogicRow({ activeLogic, toggleLogic }: LogicRowProps): JSX.Element {
+function LogicRow({ activeLogic, toggleLogic }: LogicRowProps): React.JSX.Element {
   return (
     <div className="search-row">
       <span className="search-label">逻辑</span>
@@ -111,7 +111,7 @@ function PresetRow({
   selectedPreset,
   presetDisabled,
   handlePresetClick,
-}: PresetRowProps): JSX.Element {
+}: PresetRowProps): React.JSX.Element {
   return (
     <div className="search-row">
       <span className="search-label">预置词</span>
@@ -154,7 +154,7 @@ function KeywordRow({
   handleDropdownChange,
   handleInputChange,
   handleInputKeyDown,
-}: KeywordRowProps): JSX.Element {
+}: KeywordRowProps): React.JSX.Element {
   const selectDisabled = customInput !== '' || keywordDisabled;
   const inputDisabled = animeDropdown !== '' || keywordDisabled;
   return (
@@ -197,7 +197,7 @@ interface TagsRowProps {
   removeTerm: (id: number) => void;
 }
 
-function TagsRow({ terms, removeTerm }: TagsRowProps): JSX.Element {
+function TagsRow({ terms, removeTerm }: TagsRowProps): React.JSX.Element {
   return (
     <div className="search-row search-row--tags">
       <span className="search-label">已选</span>
@@ -224,7 +224,7 @@ function SavedQueriesRow({
   searching,
   handleSearch,
   removeSavedQuery,
-}: SavedQueriesRowProps): JSX.Element | null {
+}: SavedQueriesRowProps): React.JSX.Element | null {
   if (savedQueries.length === 0) {
     return null;
   }
@@ -268,7 +268,7 @@ function QueryRow({
   handleSearch,
   saveCurrentQuery,
   removeSavedQuery,
-}: QueryRowProps): JSX.Element {
+}: QueryRowProps): React.JSX.Element {
   return (
     <>
       <div className="search-row">
@@ -358,7 +358,7 @@ function SearchControls({
   handleSearch,
   saveCurrentQuery,
   removeSavedQuery,
-}: SearchControlsProps): JSX.Element {
+}: SearchControlsProps): React.JSX.Element {
   return (
     <div className="search-controls">
       <LogicRow activeLogic={activeLogic} toggleLogic={toggleLogic} />
@@ -396,7 +396,7 @@ interface Props {
   isActive?: boolean;
 }
 
-export default function SearchPage({ isActive }: Props): JSX.Element {
+export default function SearchPage({ isActive }: Props): React.JSX.Element {
   const {
     activeLogic,
     selectedPreset,

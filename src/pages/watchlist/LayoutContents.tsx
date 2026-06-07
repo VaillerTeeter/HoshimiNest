@@ -1,6 +1,5 @@
 import { Divider } from 'animal-island-ui';
 import type { Episode, RelatedCharacter, RelatedPerson, Subject } from 'bangumi-api-client';
-import type { JSX } from 'react';
 
 import type { WatchStatus } from '../../store/watchStore';
 
@@ -43,7 +42,7 @@ function WatchStatusRow({
 }: {
   currentStatus: WatchStatus | '无状态';
   onChange: (label: WatchStatus | '无状态') => void;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <div className="query-detail-watch-status">
       {WATCH_STATUS_LABELS.map((label) => (
@@ -72,7 +71,7 @@ function DetailLinks({
   personLabel: string;
   onShowCharacters: () => void;
   onShowPersons: () => void;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <div className="query-detail-links">
       <button type="button" className="query-detail-link-btn" onClick={onShowCharacters}>
@@ -85,14 +84,14 @@ function DetailLinks({
   );
 }
 
-function DetailScore({ score }: { score: number }): JSX.Element | null {
+function DetailScore({ score }: { score: number }): React.JSX.Element | null {
   if (score > 0) {
     return <span className="query-detail-score">★ {score.toFixed(1)}</span>;
   }
   return null;
 }
 
-function ListDetailPanel(props: ListDetailPanelProps): JSX.Element {
+function ListDetailPanel(props: ListDetailPanelProps): React.JSX.Element {
   const {
     selectedItem,
     watchStatus,
@@ -151,7 +150,7 @@ function ListDetailPanel(props: ListDetailPanelProps): JSX.Element {
   );
 }
 
-function SummarySection({ summary }: { summary: string }): JSX.Element | null {
+function SummarySection({ summary }: { summary: string }): React.JSX.Element | null {
   if (summary === '') {
     return null;
   }
@@ -172,7 +171,10 @@ interface WeekdaySectionsProps {
   setSelectedId: (id: number | null) => void;
 }
 
-function WeekdaySections({ weekdayGroups, setSelectedId }: WeekdaySectionsProps): JSX.Element {
+function WeekdaySections({
+  weekdayGroups,
+  setSelectedId,
+}: WeekdaySectionsProps): React.JSX.Element {
   return (
     <>
       {DAY_ORDER.map((day) => {
@@ -257,7 +259,7 @@ export function WeekdayLayoutContent({
   setViewMode,
   weekdayGroups,
   setSelectedId,
-}: WeekdayLayoutContentProps): JSX.Element {
+}: WeekdayLayoutContentProps): React.JSX.Element {
   return (
     <div className="finished-page">
       <div className="watchlist-view-toggle">
@@ -306,7 +308,7 @@ export function GridLayoutContent({
   subjects,
   refreshing,
   setSelectedId,
-}: LayoutContentBaseProps): JSX.Element {
+}: LayoutContentBaseProps): React.JSX.Element {
   return (
     <div className="finished-page">
       {refreshing && <div className="watchlist-refreshing">正在后台更新数据…</div>}
@@ -337,7 +339,7 @@ function SubjectCardList({
   refreshing: boolean;
   selectedId: number | null;
   setSelectedId: (v: number | null) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <div className="query-results-left">
       {refreshing && <div className="watchlist-refreshing">正在后台更新数据…</div>}
@@ -394,7 +396,7 @@ export function ListLayoutContent({
   handleWatchStatusChange,
   setShowCharacters,
   setShowPersons,
-}: ListLayoutContentProps): JSX.Element {
+}: ListLayoutContentProps): React.JSX.Element {
   return (
     <div className="query-page">
       <div className="query-results">
