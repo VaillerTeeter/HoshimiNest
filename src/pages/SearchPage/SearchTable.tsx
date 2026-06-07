@@ -39,9 +39,13 @@ function MagnetBtn({ magnet, name }: { magnet: string; name: string }): React.JS
       if (dir === null) {
         return;
       }
-      addTask({ name, magnet, saveDir: dir });
+      const taskId = addTask({ name, magnet, saveDir: dir });
       const id = ++idRef.current;
-      setToasts((prev) => [...prev, { id, x, y, text: '✓ 已添加' }]);
+      if (taskId === '') {
+        setToasts((prev) => [...prev, { id, x, y, text: '⚠ 任务已存在' }]);
+      } else {
+        setToasts((prev) => [...prev, { id, x, y, text: '✓ 已添加' }]);
+      }
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
       }, 1000);

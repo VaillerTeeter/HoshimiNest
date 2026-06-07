@@ -375,9 +375,15 @@ function useDownloadActions(
 
   const addTask = useCallback(
     (info: { name: string; magnet: string; saveDir: string }): string => {
+      const exists = tasksRef.current.some(
+        (t) => t.magnet === info.magnet && t.saveDir === info.saveDir,
+      );
+      if (exists) {
+        return '';
+      }
       return addTaskOp(info, ++seqRef.current, setTasks, markTaskError);
     },
-    [markTaskError, setTasks],
+    [markTaskError, setTasks, tasksRef],
   );
 
   const pauseTask = useCallback(
