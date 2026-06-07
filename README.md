@@ -17,6 +17,18 @@
 - **Bangumi 进度同步** — 在追番页一键将本地观看进度（已看集数）写回 Bangumi，保持在线收藏数据一致
 - **本地视频库** — 扫描指定目录，将本地 MKV / MP4 文件与 Bangumi 番剧条目自动关联，支持调用外部播放器
 - **桌面通知** — 下载完成、新集到达、合并结束时推送 Windows 系统通知
+- **外部磁力链接下载** — 支持直接输入外部磁力链接进行下载，不限于 Nyaa 搜索结果
+
+## 已知问题
+
+- **季度筛选下拉框宽度** — 季度查询页面的季度下拉框宽度与年份下拉框不一致，需调整为等宽
+- **搜索中切换页面计时器重置** — 季度查询搜索进行中切换到其他页面再切回时，计时器重新从 0 开始计数，动效状态未能保留
+- **筛选栏月份筛选** — 季度查询结果页筛选栏的月份筛选功能存在问题
+- **番剧摘要列表格式** — 番剧摘要列表内容应左对齐，当前居中显示
+- **关键词-选择番剧未预制** — 搜索资源页面"关键词-选择番剧"下拉框未预制正在追番的内容
+- **磁力链接可重复添加** — 同一磁力链接可被多次添加下载，未校验当前是否已存在相同下载任务或已完成
+- **连续添加磁力链接崩溃** — 在已有磁力链接下载时，再次搜索或添加另一个磁力链接下载，程序全白崩溃
+- **下载界面截屏崩溃** — 在下载界面使用 `Ctrl+Shift+A`（Windows 截图快捷键）时程序白屏崩溃
 
 ## 目录结构
 
@@ -42,6 +54,7 @@
 │   │       └── git-guard.py                        # Windows 拦截脚本（纯 Python 3，无需 bash）
 │   ├── instructions/                               # GitHub Copilot 指令文件
 │   │   ├── context7.instructions.md              # Context7 MCP 文档查询规范
+│   │   ├── desktop-commander.instructions.md     # Desktop Commander MCP 文件/终端/进程操作规范
 │   │   ├── git-workflow.instructions.md           # AI git 操作行为规范
 │   │   └── react-bits.instructions.md            # React Bits 组件引入规范
 │   ├── ISSUE_TEMPLATE/                            # Issue 模板（中英文 bug/feature 各一份）
@@ -92,12 +105,50 @@
 │   ├── pages/                                      # 页面组件（每项导航对应一个页面）
 │   │   ├── BacklogPage.tsx                        # 补番计划
 │   │   ├── DownloadPage.tsx                       # 下载管理
-│   │   ├── FinishedPage.tsx                       # 已完番剧
-│   │   ├── QueryPage.tsx                          # 季度查询
-│   │   ├── SearchPage.tsx                         # 搜索资源
-│   │   ├── TracksPage.tsx                         # 轨道工坊
+│   │   ├── FinishedPage.tsx                       # 已完番剧（主文件，拆分逻辑到 finished/）
+│   │   ├── finished/                              # 已完番剧子组件
+│   │   │   ├── DetailModal.tsx                   # 番剧详情弹窗
+│   │   │   ├── EpisodeList.tsx                   # 剧集列表
+│   │   │   ├── FinishedCard.tsx                  # 番剧卡片
+│   │   │   ├── finishedUtils.ts                  # 工具函数
+│   │   │   ├── PeopleModals.tsx                  # 人物弹窗
+│   │   │   └── useSubjectData.ts                 # 番剧数据 hook
+│   │   ├── QueryPage.tsx                          # 季度查询（主文件，拆分逻辑到 QueryPage/）
+│   │   ├── QueryPage/                             # 季度查询子组件
+│   │   │   ├── CharacterModal.tsx                # 角色详情弹窗
+│   │   │   ├── FilterGroup.tsx                   # 筛选条件组
+│   │   │   ├── PersonModal.tsx                   # 人物详情弹窗
+│   │   │   ├── queryHelpers.ts                   # 查询辅助函数
+│   │   │   ├── QueryResultsView.tsx              # 查询结果视图
+│   │   │   ├── QuerySearchView.tsx               # 查询搜索视图
+│   │   │   ├── ResultsList.tsx                   # 结果列表
+│   │   │   ├── SubjectDetail.tsx                 # 番剧详情
+│   │   │   ├── useQueryPageState.ts              # 查询页面状态 hook
+│   │   │   └── useSubjectData.ts                 # 番剧数据 hook
+│   │   ├── SearchPage.tsx                         # 搜索资源（主文件，拆分逻辑到 SearchPage/）
+│   │   ├── SearchPage/                            # 资源搜索子组件
+│   │   │   ├── SearchTable.tsx                   # 搜索结果表格
+│   │   │   ├── types.ts                          # 类型定义
+│   │   │   └── useSearchPage.ts                  # 搜索页面状态 hook
+│   │   ├── TracksPage.tsx                         # 轨道工坊（主文件，拆分逻辑到 tracks/）
+│   │   ├── tracks/                                # 轨道工坊子组件
+│   │   │   ├── constants.ts                      # 常量定义
+│   │   │   ├── FilePanel.tsx                     # 文件队列面板
+│   │   │   ├── TrackRow.tsx                      # 轨道行组件
+│   │   │   ├── types.ts                          # 类型定义
+│   │   │   └── useTracksPage.ts                  # 轨道页面状态 hook
 │   │   ├── WatchingPage.tsx                       # 正在追番
-│   │   └── WatchListPage.tsx                      # 追番列表基础页（WatchingPage / BacklogPage 复用）
+│   │   ├── WatchListPage.tsx                      # 追番列表基础页（主文件，拆分逻辑到 watchlist/）
+│   │   └── watchlist/                             # 追番列表子组件
+│   │       ├── CharactersModal.tsx               # 角色列表弹窗
+│   │       ├── constants.ts                      # 常量定义
+│   │       ├── DetailModal.tsx                   # 番剧详情弹窗
+│   │       ├── EpisodePills.tsx                  # 剧集进度胶囊
+│   │       ├── LayoutContents.tsx                # 布局内容（周历/网格）
+│   │       ├── PersonsModal.tsx                  # 人物列表弹窗
+│   │       ├── SubjectCard.tsx                   # 番剧卡片
+│   │       ├── types.ts                          # 类型定义
+│   │       └── useWatchListPage.ts               # 追番页面状态 hook
 │   ├── store/                                      # 全局状态
 │   │   ├── downloadStore.tsx                      # 下载任务 Context（状态机 + aria2 事件 + localStorage）
 │   │   └── watchStore.ts                          # 追番收藏 localStorage 工具函数
@@ -208,6 +259,10 @@ yarn dev
 yarn tauri build
 ```
 
+## 测试手顺
+
+> 详细的 UI 手动测试步骤请参阅 [manual-test-guide.md](.github/docs/testing/manual-test-guide.md)。
+
 ## CI 检查说明
 
 > 详细的 CI 检查规则文档已独立维护，请参阅 [ci-checks.md](.github/docs/ci/ci-checks.md)。
@@ -245,6 +300,7 @@ yarn tauri build
 | 文件 | 说明 |
 | --- | --- |
 | `context7.instructions.md` | 库/框架文档查询规范（Context7 MCP 工具调用顺序与 library ID 选择） |
+| `desktop-commander.instructions.md` | Desktop Commander MCP 文件/终端/进程操作规范（文件读写、命令执行、代码搜索、进程管理） |
 | `git-workflow.instructions.md` | AI git 操作行为规范（授权要求、分支命名、提交规范、PR 工作流） |
 | `react-bits.instructions.md` | React Bits 动效组件引入规范（源码复制方式，非 npm 包） |
 

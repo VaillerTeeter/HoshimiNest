@@ -126,7 +126,10 @@
     "choco",
     "Initialise",
     "Maru",
-    "ZCOOL"
+    "ZCOOL",
+    "LOCALAPPDATA",
+    "debuginfo",
+    "XXQX"
   ],
 
   "flagWords": [
