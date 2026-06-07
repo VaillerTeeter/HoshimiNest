@@ -176,7 +176,13 @@ function loadPersistedTasks(): DownloadTask[] {
       if (!isValidTask(t)) {
         return acc;
       }
-      const task = t;
+      // Normalize JSON null → undefined for optional string fields,
+      // otherwise null.length crashes the DownloadPage render.
+      const task: DownloadTask = {
+        ...t,
+        speed: t.speed ?? undefined,
+        phase: t.phase ?? undefined,
+      };
       acc.push(
         task.status === '下载中' || task.status === '暂停'
           ? { ...task, status: '中断' as TaskStatus, speed: undefined }
@@ -430,8 +436,15 @@ function useProgressListener(
     void (async () => {
       try {
         const fn = await listen<ProgressPayload>('download-progress', (event) => {
+          // Normalize Rust Option::None → JSON null → undefined for optional fields.
+          // Without this, null values arriving mid-flight crash subsequent renders.
+          const payload: ProgressPayload = {
+            ...event.payload,
+            speed: event.payload.speed ?? undefined,
+            phase: event.payload.phase ?? undefined,
+          };
           setTasks((prev) =>
-            prev.map((t) => (t.id === event.payload.id ? reduceProgressTask(t, event.payload) : t)),
+            prev.map((t) => (t.id === payload.id ? reduceProgressTask(t, payload) : t)),
           );
         });
         unlisten = fn;
