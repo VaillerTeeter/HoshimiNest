@@ -1406,6 +1406,7 @@ body,
   gap: 6px;
   justify-content: center;
   min-width: 0;
+  text-align: left;
 }
 
 .query-result-title {
