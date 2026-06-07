@@ -1,6 +1,6 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Button, Icon, Loading, type IconName } from 'animal-island-ui';
-import { useState, useRef, useEffect, type MutableRefObject } from 'react';
+import { useState, useRef, useEffect, useCallback, type MutableRefObject } from 'react';
 
 import './App.css';
 import BacklogPage from './pages/BacklogPage';
@@ -26,29 +26,42 @@ const NAV_ITEMS: Array<{ key: PageKey; label: string; icon: IconName }> = [
   { key: 'tracks', label: '轨道工坊', icon: 'icon-diy' },
 ];
 
+interface LoadingTimerProps {
+  /** 搜索开始的 timestamp (ms) */
+  startedAt: number;
+}
+
 /**
- * 独立计时组件：每秒只重渲染自身，不波及兄弟节点 Loading 的动画
+ * 独立计时组件：基于绝对时间计算已过秒数，避免组件挂载/卸载时丢失进度
  *
+ * @param props - LoadingTimer 属性
+ * @param props.startedAt - 搜索开始的 timestamp (ms)
  * @returns JSX element showing elapsed seconds
  */
-function LoadingTimer(): React.JSX.Element {
-  const [seconds, setSeconds] = useState(0);
+function LoadingTimer({ startedAt }: LoadingTimerProps): React.JSX.Element {
+  const calcSeconds = useCallback(
+    () => Math.max(0, Math.floor((Date.now() - startedAt) / 1000)),
+    [startedAt],
+  );
+  const [seconds, setSeconds] = useState<number>(() => calcSeconds());
   useEffect(() => {
+    setSeconds(calcSeconds());
     const id = setInterval(() => {
-      setSeconds((s) => s + 1);
-    }, 1000);
+      setSeconds(calcSeconds());
+    }, 200);
     return () => {
       clearInterval(id);
     };
-  }, []);
+  }, [startedAt, calcSeconds]);
   return <span className="query-loading-timer">{seconds} s</span>;
 }
 
 interface LoadingOverlayProps {
   onCancel: () => void;
+  startedAt: number;
 }
 
-function LoadingOverlay({ onCancel }: LoadingOverlayProps): React.JSX.Element {
+function LoadingOverlay({ onCancel, startedAt }: LoadingOverlayProps): React.JSX.Element {
   return (
     <div className="query-loading-overlay">
       <button
@@ -60,7 +73,7 @@ function LoadingOverlay({ onCancel }: LoadingOverlayProps): React.JSX.Element {
       >
         ✕
       </button>
-      <LoadingTimer />
+      <LoadingTimer startedAt={startedAt} />
       <Loading active className="query-loading-inner" />
     </div>
   );
@@ -203,11 +216,21 @@ function AppInner(): React.JSX.Element {
     queryCancelRef.current?.();
   }
 
+  // 记录搜索开始的绝对时间戳，在渲染阶段同步赋值，确保子组件挂载前已就绪
+  const searchStartedAtRef = useRef<number>(0);
+  const prevLoadingRef = useRef(false);
+  if (isQueryLoading && !prevLoadingRef.current) {
+    searchStartedAtRef.current = Date.now();
+  }
+  prevLoadingRef.current = isQueryLoading;
+
   const currentLabel = NAV_ITEMS.find((item) => item.key === page)?.label ?? '';
 
   return (
     <>
-      {isQueryLoading && page === 'query' && <LoadingOverlay onCancel={handleQueryCancel} />}
+      {isQueryLoading && page === 'query' && (
+        <LoadingOverlay onCancel={handleQueryCancel} startedAt={searchStartedAtRef.current} />
+      )}
       <div className="app-shell">
         <header className="topbar" data-tauri-drag-region>
           <WindowControls />
