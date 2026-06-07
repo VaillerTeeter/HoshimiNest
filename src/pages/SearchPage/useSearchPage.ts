@@ -276,7 +276,7 @@ function useSearchActions(
   return { searchQuery, saveCurrentQuery, handleSearch };
 }
 
-export function useSearchPage(): UseSearchPageResult {
+export function useSearchPage(isActive?: boolean): UseSearchPageResult {
   const [activeLogic, setActiveLogic] = useState<LogicOp | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [animeDropdown, setAnimeDropdown] = useState('');
@@ -289,9 +289,12 @@ export function useSearchPage(): UseSearchPageResult {
   const [terms, addTerm, removeTerm] = useTerms();
 
   useEffect(() => {
+    if (isActive !== true) {
+      return;
+    }
     const entries = loadEntriesByStatus('正在追番');
     setWatchingNames(entries.map((e) => e.subject.name_cn || e.subject.name));
-  }, []);
+  }, [isActive]);
 
   const keywordActive = animeDropdown !== '' || customInput !== '';
   const presetDisabled = keywordActive;

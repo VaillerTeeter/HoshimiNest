@@ -293,10 +293,14 @@ export function useWatchListPage(
   isActive: boolean | undefined,
   layout: 'list' | 'grid' | 'weekday',
 ): UseWatchListPageResult {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>(() =>
+    loadEntriesByStatus(status).map((e) => e.subject),
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [watchStatus, setWatchStatus] = useState<Record<number, WatchStatus>>({});
+  const [watchStatus, setWatchStatus] = useState<Record<number, WatchStatus>>(() =>
+    loadStatusMap(),
+  );
   const [viewMode, setViewMode] = useState<'weekday' | 'grid'>(
     layout === 'weekday' ? 'weekday' : 'grid',
   );

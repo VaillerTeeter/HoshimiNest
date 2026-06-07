@@ -113,7 +113,7 @@ function PageContent({
     return <FinishedPage isActive={page === 'finished'} />;
   }
   if (itemKey === 'search') {
-    return <SearchPage />;
+    return <SearchPage isActive={page === 'search'} />;
   }
   if (itemKey === 'download') {
     return <DownloadPage />;

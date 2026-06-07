@@ -392,7 +392,11 @@ function SearchControls({
   );
 }
 
-export default function SearchPage(): JSX.Element {
+interface Props {
+  isActive?: boolean;
+}
+
+export default function SearchPage({ isActive }: Props): JSX.Element {
   const {
     activeLogic,
     selectedPreset,
@@ -416,7 +420,7 @@ export default function SearchPage(): JSX.Element {
     handleSearch,
     saveCurrentQuery,
     removeSavedQuery,
-  } = useSearchPage();
+  } = useSearchPage(isActive);
 
   return (
     <div className="search-page">
