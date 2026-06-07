@@ -245,8 +245,8 @@ interface FilterSets {
 }
 
 function matchesMonth(date: string | undefined, filterMonths: Set<string>): boolean {
-  if (date === undefined || date === '') {
-    return true;
+  if (date === undefined || date === null || date === '') {
+    return false;
   }
   const parts = date.split('-');
   const [, monthPart] = parts;
