@@ -244,7 +244,7 @@ interface FilterSets {
   filterAudiences: Set<string>;
 }
 
-function matchesMonth(date: string | undefined, filterMonths: Set<string>): boolean {
+function matchesMonth(date: string | undefined | null, filterMonths: Set<string>): boolean {
   if (date === undefined || date === null || date === '') {
     return false;
   }
