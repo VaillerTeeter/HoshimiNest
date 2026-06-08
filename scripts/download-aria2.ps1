@@ -3,6 +3,9 @@
 
 $ErrorActionPreference = "Stop"
 
+# 强制 TLS 1.2，防止降级攻击
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 function Out-ColorLine {
     param([string]$Message, [string]$Color = 'White')
     $ansiMap = @{
@@ -44,7 +47,16 @@ $TmpZip = Join-Path $env:TEMP $ZipName
 $TmpDir = Join-Path $env:TEMP "aria2-extract"
 
 Out-ColorLine "Downloading $ZipName..." Cyan
-Invoke-WebRequest -Uri $ZipUrl -OutFile $TmpZip -UseBasicParsing
+Invoke-WebRequest -Uri $ZipUrl -OutFile $TmpZip -UseBasicParsing -TimeoutSec 120
+
+# 校验下载文件完整性（最小大小 1KB，防止空文件或 HTML 错误页）
+if (-not (Test-Path $TmpZip)) {
+    Write-Error "下载失败：文件不存在（可能网络问题或 URL 已变更）"
+}
+$zipSize = (Get-Item $TmpZip).Length
+if ($zipSize -lt 1024) {
+    Write-Error "下载文件异常（大小: ${zipSize} bytes），可能被劫持或下载页面而非文件"
+}
 
 Out-ColorLine "Extracting..." Cyan
 Remove-Item $TmpDir -Recurse -Force -ErrorAction SilentlyContinue

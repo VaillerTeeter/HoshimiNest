@@ -10,21 +10,28 @@ let _termId = 0;
 function parseNyaaHtml(html: string): NyaaResult[] {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const rows = doc.querySelectorAll('table.table tbody tr');
+
+  // Nyaa 改版后表格选择器可能匹配不到任何行
+  if (rows.length === 0) {
+    throw new Error('Nyaa 页面结构可能已变更（未找到结果表格）');
+  }
+
   const results: NyaaResult[] = [];
   rows.forEach((row, i) => {
     const tds = row.querySelectorAll('td');
     if (tds.length < 8) {
       return;
     }
-    const nameEl = tds[1].querySelector('a[href^="/view/"]:not([href*="#"])');
+    // 所有 tds[n] 使用可选链 ?.，防止 Nyaa 增删列导致 TypeError
+    const nameEl = tds[1]?.querySelector('a[href^="/view/"]:not([href*="#"])');
     const name = nameEl?.textContent?.trim() ?? '';
-    const magnetEl = tds[2].querySelector('a[href^="magnet:"]');
+    const magnetEl = tds[2]?.querySelector('a[href^="magnet:"]');
     const magnet = magnetEl?.getAttribute('href') ?? '';
-    const size = tds[3].textContent?.trim() ?? '';
-    const date = tds[4].textContent?.trim() ?? '';
-    const seeders = Number.parseInt(tds[5].textContent?.trim() ?? '0', 10);
-    const leechers = Number.parseInt(tds[6].textContent?.trim() ?? '0', 10);
-    const completed = Number.parseInt(tds[7].textContent?.trim() ?? '0', 10);
+    const size = tds[3]?.textContent?.trim() ?? '';
+    const date = tds[4]?.textContent?.trim() ?? '';
+    const seeders = Number(tds[5]?.textContent?.trim()) || 0;
+    const leechers = Number(tds[6]?.textContent?.trim()) || 0;
+    const completed = Number(tds[7]?.textContent?.trim()) || 0;
     if (name) {
       results.push({ key: String(i), name, magnet, size, date, seeders, leechers, completed });
     }
@@ -260,7 +267,14 @@ function useSearchActions(
     try {
       const url = `https://nyaa.si/?q=${encodeURIComponent(q)}`;
       const html = await invoke<string>('fetch_html', { url });
-      const results = parseNyaaHtml(html);
+      let results: NyaaResult[];
+      try {
+        results = parseNyaaHtml(html);
+      } catch (parseError) {
+        // Nyaa 改版 → 解析完全失败，将错误信息透传给用户
+        setSearchError(String(parseError));
+        return;
+      }
       if (results.length === 0) {
         setSearchError('没有找到相关资源');
       } else {

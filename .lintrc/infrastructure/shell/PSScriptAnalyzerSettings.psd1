@@ -10,7 +10,7 @@
 
         PSAvoidLongLines = @{
             Enable            = $true
-            MaximumLineLength = 100
+            MaximumLineLength = 120
         }
 
         PSPlaceOpenBrace = @{

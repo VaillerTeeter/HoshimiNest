@@ -48,7 +48,7 @@ function LoadingTimer({ startedAt }: LoadingTimerProps): React.JSX.Element {
     setSeconds(calcSeconds());
     const id = setInterval(() => {
       setSeconds(calcSeconds());
-    }, 200);
+    }, 1000);
     return () => {
       clearInterval(id);
     };

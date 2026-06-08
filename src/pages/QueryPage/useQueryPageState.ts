@@ -1,6 +1,7 @@
-import { type Subject, createBangumiClient } from 'bangumi-api-client';
+import type { Subject } from 'bangumi-api-client';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 
+import { bgm } from '../../api/bgm';
 import {
   type WatchStatus,
   loadStatusMap,
@@ -32,8 +33,6 @@ function seasonLabel(s: SeasonKey): string {
     }
   }
 }
-
-const bgm = createBangumiClient({ userAgent: 'MikanBox/0.1.0' });
 
 // ── fetchMonth ───────────────────────────────────────────────────────────────
 

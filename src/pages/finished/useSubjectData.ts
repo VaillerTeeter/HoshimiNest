@@ -1,12 +1,7 @@
-import {
-  createBangumiClient,
-  type Episode,
-  type RelatedCharacter,
-  type RelatedPerson,
-} from 'bangumi-api-client';
+import type { Episode, RelatedCharacter, RelatedPerson } from 'bangumi-api-client';
 import { useEffect, useState } from 'react';
 
-const bgm = createBangumiClient({ userAgent: 'MikanBox/0.1.0' });
+import { bgm } from '../../api/bgm';
 
 export function useEpisodes(subjectId: number | null): { episodes: Episode[]; loading: boolean } {
   const [episodes, setEpisodes] = useState<Episode[]>([]);

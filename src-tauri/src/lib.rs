@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Mutex
+        Mutex, OnceLock
     },
     time::Duration
 };
@@ -31,20 +31,20 @@ fn json_rpc(method: &str, params: serde_json::Value) -> serde_json::Value {
 
 /// aria2 JSON-RPC params for single-GID commands (pause / unpause /
 /// forceRemove / removeDownloadResult): `[token, gid]`
-fn aria2_simple_params(gid: &str) -> serde_json::Value {
-    serde_json::Value::Array(vec![token_param(), serde_json::Value::String(gid.to_string())])
+fn aria2_simple_params(gid: &str) -> Result<serde_json::Value, String> {
+    Ok(serde_json::Value::Array(vec![token_param()?, serde_json::Value::String(gid.to_string())]))
 }
 
 /// aria2 JSON-RPC params for `aria2.shutdown`: `[token]`
-fn aria2_shutdown_params() -> serde_json::Value {
-    serde_json::Value::Array(vec![token_param()])
+fn aria2_shutdown_params() -> Result<serde_json::Value, String> {
+    Ok(serde_json::Value::Array(vec![token_param()?]))
 }
 
 /// aria2 JSON-RPC params for `aria2.tellStatus`:
 /// `[token, gid, [keys…]]`
-fn aria2_tell_status_params(gid: &str) -> serde_json::Value {
-    serde_json::Value::Array(vec![
-        token_param(),
+fn aria2_tell_status_params(gid: &str) -> Result<serde_json::Value, String> {
+    Ok(serde_json::Value::Array(vec![
+        token_param()?,
         serde_json::Value::String(gid.to_string()),
         serde_json::Value::Array(vec![
             serde_json::Value::String("status".to_string()),
@@ -56,14 +56,14 @@ fn aria2_tell_status_params(gid: &str) -> serde_json::Value {
             serde_json::Value::String("connections".to_string()),
             serde_json::Value::String("numSeeders".to_string()),
         ]),
-    ])
+    ]))
 }
 
 /// aria2 JSON-RPC params for `aria2.tellStopped`:
 /// `[token, 0, 128, [keys…]]`
-fn aria2_tell_stopped_params() -> serde_json::Value {
-    serde_json::Value::Array(vec![
-        token_param(),
+fn aria2_tell_stopped_params() -> Result<serde_json::Value, String> {
+    Ok(serde_json::Value::Array(vec![
+        token_param()?,
         serde_json::Value::Number(serde_json::Number::from(0)),
         serde_json::Value::Number(serde_json::Number::from(128)),
         serde_json::Value::Array(vec![
@@ -71,7 +71,7 @@ fn aria2_tell_stopped_params() -> serde_json::Value {
             serde_json::Value::String("status".to_string()),
             serde_json::Value::String("followedBy".to_string()),
         ]),
-    ])
+    ]))
 }
 
 /// Build `aria2.addUri` options map.
@@ -86,18 +86,32 @@ fn aria2_add_uri_options(save_dir: &str, tracker_arg: &str) -> serde_json::Value
 }
 
 /// Build `aria2.addUri` params: `[token, [magnet], options]`
-fn aria2_add_uri_params(magnet: &str, options: &serde_json::Value) -> serde_json::Value {
-    serde_json::Value::Array(vec![
-        token_param(),
+fn aria2_add_uri_params(magnet: &str, options: &serde_json::Value) -> Result<serde_json::Value, String> {
+    Ok(serde_json::Value::Array(vec![
+        token_param()?,
         serde_json::Value::Array(vec![serde_json::Value::String(magnet.to_string())]),
         options.clone(),
-    ])
+    ]))
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const ARIA2_PORT: u16 = 6800;
-const ARIA2_TOKEN: &str = "mikanbox-internal";
+
+/// 运行时生成的 aria2 RPC token（每进程一次）
+static ARIA2_TOKEN: OnceLock<String> = OnceLock::new();
+
+/// 基于 PID + 当前纳秒生成唯一 token
+fn generate_token() -> String {
+    let pid = std::process::id();
+    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().subsec_nanos();
+    format!("mikanbox-{pid:x}-{nanos:x}")
+}
+
+/// 将 token 存入 OnceLock（setup 期调用一次）
+fn set_token(token: String) {
+    let _ = ARIA2_TOKEN.set(token);
+}
 
 // ── State ─────────────────────────────────────────────────────────────────
 
@@ -156,8 +170,9 @@ fn rpc_url() -> String {
     format!("http://127.0.0.1:{}/jsonrpc", ARIA2_PORT)
 }
 
-fn token_param() -> serde_json::Value {
-    serde_json::Value::String(format!("token:{}", ARIA2_TOKEN))
+fn token_param() -> Result<serde_json::Value, String> {
+    let token = ARIA2_TOKEN.get().ok_or_else(|| "ARIA2_TOKEN must be set before any aria2 RPC call".to_string())?;
+    Ok(serde_json::Value::String(format!("token:{token}")))
 }
 
 async fn aria2_call(
@@ -191,13 +206,11 @@ fn format_speed(bps: u64) -> Option<String> {
 
 // ── Polling loop (one per download task) ─────────────────────────────────
 
+/// 最大轮询时长（秒），防止前端 crash / 网络断开导致永久轮询
+const MAX_POLL_DURATION_SECS: u64 = 1800;
+
 #[allow(clippy::disallowed_macros)]
-async fn poll_task(
-    app: tauri::AppHandle,
-    task_id: String,
-    gid: String,
-    mut stop: oneshot::Receiver<()>
-) {
+async fn poll_task(app: tauri::AppHandle, task_id: String, gid: String, mut stop: oneshot::Receiver<()>) {
     let client = reqwest::Client::new();
     // current_gid may change when a magnet's metadata download spawns the
     // real BT download (followedBy). We start with the gid returned by addUri.
@@ -206,11 +219,26 @@ async fn poll_task(
     loop {
         tokio::select! {
             _ = &mut stop => break,
+            _ = tokio::time::sleep(Duration::from_secs(MAX_POLL_DURATION_SECS)) => {
+                warn!("[{task_id}] poll 超时（{MAX_POLL_DURATION_SECS}s），自动清理");
+                let _ = app.emit("download-progress", DownloadProgress {
+                    id: task_id.clone(),
+                    progress: 0,
+                    speed: None,
+                    aria2_status: Some("error".to_string()),
+                    phase: Some("轮询超时".to_string()),
+                    connections: None,
+                    seeders: None,
+                });
+                break;
+            },
             _ = tokio::time::sleep(Duration::from_millis(500)) => {
                 let result = aria2_call(
                     &client,
                     "aria2.tellStatus",
-                    aria2_tell_status_params(&current_gid),
+                    aria2_tell_status_params(&current_gid).unwrap_or_else(|e| {
+                        serde_json::Value::Array(vec![serde_json::Value::String(e)])
+                    }),
                 )
                 .await;
 
@@ -369,7 +397,9 @@ async fn poll_task(
                         let stopped = aria2_call(
                             &client,
                             "aria2.tellStopped",
-                            aria2_tell_stopped_params(),
+                            aria2_tell_stopped_params().unwrap_or_else(|e| {
+                                serde_json::Value::Array(vec![serde_json::Value::String(e)])
+                            }),
                         )
                         .await;
 
@@ -520,22 +550,14 @@ struct MergeCtx<'a> {
 }
 
 /// 为单个输入文件拼接按轨道类型分组的选择参数（替代已弃用的 --tracks）
-fn push_file_track_args(
-    ctx: &mut MergeCtx,
-    tracks: &[TrackInfo],
-    file_idx: usize,
-    job_id: &str,
-    role: &str
-) {
+fn push_file_track_args(ctx: &mut MergeCtx, tracks: &[TrackInfo], file_idx: usize, job_id: &str, role: &str) {
     for (type_str, flag_sel, flag_none) in [
         ("video", "--video-tracks", "--no-video"),
         ("audio", "--audio-tracks", "--no-audio"),
         ("subtitle", "--subtitle-tracks", "--no-subtitles")
     ] {
-        let all_of_type: Vec<&TrackInfo> =
-            tracks.iter().filter(|t| t.track_type == type_str).collect();
-        let selected: Vec<&TrackInfo> =
-            all_of_type.iter().filter(|t| t.selected).copied().collect();
+        let all_of_type: Vec<&TrackInfo> = tracks.iter().filter(|t| t.track_type == type_str).collect();
+        let selected: Vec<&TrackInfo> = all_of_type.iter().filter(|t| t.selected).copied().collect();
 
         if all_of_type.is_empty() {
             // 文件中无此类型轨道，无需处理
@@ -613,12 +635,7 @@ fn build_mkvmerge_args(job: &MergeJobReq) -> Result<Vec<String>, String> {
 
 /// Parse a "Progress: N%" line from stdout/stderr and emit progress event.
 /// Returns true if a progress line was consumed.
-fn handle_mkvmerge_progress(
-    app: &tauri::AppHandle,
-    job_id: &str,
-    line: &str,
-    last_pct: &mut u8
-) -> bool {
+fn handle_mkvmerge_progress(app: &tauri::AppHandle, job_id: &str, line: &str, last_pct: &mut u8) -> bool {
     let trimmed = line.trim();
     let rest = match trimmed.strip_prefix("Progress: ") {
         Some(r) => r,
@@ -689,11 +706,7 @@ async fn run_mkvmerge_job(app: &tauri::AppHandle, job: &MergeJobReq) -> Result<(
                 debug!("[merge][{}] exit code={}", job.id, code);
                 if code == 1 {
                     // mkvmerge exit 1 = 成功但有警告，不当做失败
-                    warn!(
-                        "[merge][{}] mkvmerge 有警告但已完成: {}",
-                        job.id,
-                        String::from_utf8_lossy(&last_err).trim()
-                    );
+                    warn!("[merge][{}] mkvmerge 有警告但已完成: {}", job.id, String::from_utf8_lossy(&last_err).trim());
                     break;
                 } else if code != 0 {
                     let msg = String::from_utf8_lossy(&last_err);
@@ -724,10 +737,8 @@ async fn identify_tracks(app: tauri::AppHandle, path: String) -> Result<Vec<Trac
         format!("找不到 mkvmerge sidecar: {e}")
     })?;
 
-    let (mut rx, _child) = sidecar_cmd
-        .args(["--identify", "--identification-format", "json", &path])
-        .spawn()
-        .map_err(|e| {
+    let (mut rx, _child) =
+        sidecar_cmd.args(["--identify", "--identification-format", "json", &path]).spawn().map_err(|e| {
             error!("[identify] mkvmerge 启动失败: {e}");
             format!("mkvmerge 启动失败: {e}")
         })?;
@@ -855,6 +866,13 @@ async fn start_merge_queue(app: tauri::AppHandle, jobs: Vec<MergeJobReq>) -> Res
 
 #[tauri::command]
 async fn fetch_html(url: String) -> Result<String, String> {
+    // 域名 allowlist：仅允许访问 Nyaa 及其镜像站，防止 SSRF 扫描内网
+    let parsed = url::Url::parse(&url).map_err(|e| format!("URL 格式无效: {e}"))?;
+    let host = parsed.host_str().ok_or("URL 缺少主机名")?;
+    if !matches!(host, "nyaa.si" | "sukebei.nyaa.si") {
+        return Err(format!("不允许访问的域名: {host}"));
+    }
+
     let client = reqwest::Client::builder()
         .user_agent(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
@@ -863,14 +881,7 @@ async fn fetch_html(url: String) -> Result<String, String> {
         )
         .build()
         .map_err(|e| e.to_string())?;
-    client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?
-        .text()
-        .await
-        .map_err(|e| e.to_string())
+    client.get(&url).send().await.map_err(|e| e.to_string())?.text().await.map_err(|e| e.to_string())
 }
 
 /// `add_magnet` accepts only 4 user-facing parameters (`app` + 3 payload
@@ -878,12 +889,7 @@ async fn fetch_html(url: String) -> Result<String, String> {
 /// `too-many-arguments` threshold.  `gid_map` and `poll_stops` are now
 /// obtained via `app.state()` inside the body.
 #[tauri::command]
-async fn add_magnet(
-    app: tauri::AppHandle,
-    task_id: String,
-    magnet: String,
-    save_dir: String
-) -> Result<(), String> {
+async fn add_magnet(app: tauri::AppHandle, task_id: String, magnet: String, save_dir: String) -> Result<(), String> {
     if !magnet.starts_with("magnet:") {
         return Err("只接受磁力链接".to_string());
     }
@@ -906,9 +912,7 @@ async fn add_magnet(
         let old_gid = gid_map.0.lock().unwrap_or_else(|e| e.into_inner()).get(&task_id).cloned();
         if let Some(old_gid) = old_gid {
             // Remove from aria2 stopped/error result list (no-op if not found)
-            let _ =
-                aria2_call(&client, "aria2.removeDownloadResult", aria2_simple_params(&old_gid))
-                    .await;
+            let _ = aria2_call(&client, "aria2.removeDownloadResult", aria2_simple_params(&old_gid)?).await;
         }
     }
     // Stop any existing poll loop for this task
@@ -934,8 +938,7 @@ async fn add_magnet(
         // an instant false "100%". check-integrity=true re-hashes each piece;
         // zeros/corrupt data fails → real re-download. If data is truly
         // complete the check passes quickly and completion is legitimately fast.
-        gid_result =
-            aria2_call(&client, "aria2.addUri", aria2_add_uri_params(&magnet, &options)).await;
+        gid_result = aria2_call(&client, "aria2.addUri", aria2_add_uri_params(&magnet, &options)?).await;
         if gid_result.is_ok() {
             break;
         }
@@ -945,7 +948,16 @@ async fn add_magnet(
         }
     }
 
-    let gid = gid_result?.as_str().ok_or("aria2 返回了无效的 gid")?.to_string();
+    let gid = match gid_result {
+        Ok(v) => v,
+        Err(e) if e.contains("连接失败") => {
+            return Err("aria2c 未就绪（已重试 5 次仍无法连接），请确认下载服务是否正常启动".to_string());
+        },
+        Err(e) => {
+            return Err(format!("添加磁力任务失败（已重试 5 次）: {e}"));
+        }
+    };
+    let gid = gid.as_str().ok_or("aria2 返回了无效的 gid")?.to_string();
     info!("[add_magnet] ok: task={task_id} gid={gid}");
 
     {
@@ -975,7 +987,7 @@ async fn pause_task(app: tauri::AppHandle, task_id: String) -> Result<(), String
     if let Some(gid) = gid {
         debug!("[pause_task] gid={gid}");
         let client = reqwest::Client::new();
-        aria2_call(&client, "aria2.pause", aria2_simple_params(&gid)).await?;
+        aria2_call(&client, "aria2.pause", aria2_simple_params(&gid)?).await?;
     }
     Ok(())
 }
@@ -988,7 +1000,7 @@ async fn resume_task(app: tauri::AppHandle, task_id: String) -> Result<(), Strin
     if let Some(gid) = gid {
         debug!("[resume_task] gid={gid}");
         let client = reqwest::Client::new();
-        aria2_call(&client, "aria2.unpause", aria2_simple_params(&gid)).await?;
+        aria2_call(&client, "aria2.unpause", aria2_simple_params(&gid)?).await?;
     }
     Ok(())
 }
@@ -1014,7 +1026,7 @@ async fn cancel_task(app: tauri::AppHandle, task_id: String) -> Result<(), Strin
         debug!("[cancel_task] gid={gid}");
         let client = reqwest::Client::new();
         // Use forceRemove so it works even when paused
-        let _ = aria2_call(&client, "aria2.forceRemove", aria2_simple_params(&gid)).await;
+        let _ = aria2_call(&client, "aria2.forceRemove", aria2_simple_params(&gid)?).await;
     }
     Ok(())
 }
@@ -1056,44 +1068,51 @@ pub fn run() {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 let client = reqwest::Client::new();
-                let _ = aria2_call(&client, "aria2.shutdown", aria2_shutdown_params()).await;
+                let _ = aria2_call(
+                    &client,
+                    "aria2.shutdown",
+                    aria2_shutdown_params()
+                        .unwrap_or_else(|e| serde_json::Value::Array(vec![serde_json::Value::String(e)]))
+                )
+                .await;
                 tokio::time::sleep(Duration::from_millis(800)).await;
+
+                let token = generate_token();
+                set_token(token.clone());
+                info!("[aria2] rpc-secret 已生成");
 
                 let bt_tracker_arg = format!("--bt-tracker={}", cfg.bt_trackers.join(","));
                 let bt_max_peers_arg = format!("--bt-max-peers={}", cfg.bt_max_peers);
                 let disk_cache_arg = format!("--disk-cache={}M", cfg.disk_cache_mb);
-                let listen_port_arg =
-                    format!("--listen-port={}-{}", cfg.listen_port_start, cfg.listen_port_end);
+                let listen_port_arg = format!("--listen-port={}-{}", cfg.listen_port_start, cfg.listen_port_end);
 
-                let child_result = handle
-                    .shell()
-                    .sidecar("aria2c")
-                    .map_err(|e| error!("aria2c sidecar not found: {e}"))
-                    .and_then(|cmd| {
-                        cmd.args([
-                            "--enable-rpc",
-                            &format!("--rpc-listen-port={ARIA2_PORT}"),
-                            &format!("--rpc-secret={ARIA2_TOKEN}"),
-                            "--rpc-allow-origin-all",
-                            "--quiet=true",
-                            "--auto-file-renaming=false",
-                            "--continue=true",
-                            "--seed-time=0",
-                            &bt_max_peers_arg,
-                            &listen_port_arg,
-                            "--bt-enable-lpd=true",
-                            &disk_cache_arg,
-                            &bt_tracker_arg
-                        ])
-                        .spawn()
-                        .map(|(_rx, child)| child)
-                        .map_err(|e| error!("Failed to spawn aria2c: {e}"))
-                    });
+                let child_result =
+                    handle.shell().sidecar("aria2c").map_err(|e| error!("aria2c sidecar not found: {e}")).and_then(
+                        |cmd| {
+                            cmd.args([
+                                "--enable-rpc",
+                                &format!("--rpc-listen-port={ARIA2_PORT}"),
+                                &format!("--rpc-secret={token}"),
+                                "--rpc-allow-origin-all",
+                                "--quiet=true",
+                                "--auto-file-renaming=false",
+                                "--continue=true",
+                                "--seed-time=0",
+                                &bt_max_peers_arg,
+                                &listen_port_arg,
+                                "--bt-enable-lpd=true",
+                                &disk_cache_arg,
+                                &bt_tracker_arg
+                            ])
+                            .spawn()
+                            .map(|(_rx, child)| child)
+                            .map_err(|e| error!("Failed to spawn aria2c: {e}"))
+                        }
+                    );
 
                 if let Ok(child) = child_result {
                     info!("[aria2] 已启动 (port {ARIA2_PORT})");
-                    *handle.state::<Aria2Child>().0.lock().unwrap_or_else(|e| e.into_inner()) =
-                        Some(child);
+                    *handle.state::<Aria2Child>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some(child);
                 }
             });
             Ok(())
@@ -1121,10 +1140,14 @@ pub fn run() {
                 tauri::async_runtime::spawn(async move {
                     info!("[aria2] 正在关闭…");
                     let client = reqwest::Client::new();
-                    let _ = aria2_call(&client, "aria2.shutdown", aria2_shutdown_params()).await;
-                    if let Some(child) =
-                        app.state::<Aria2Child>().0.lock().unwrap_or_else(|e| e.into_inner()).take()
-                    {
+                    let _ = aria2_call(
+                        &client,
+                        "aria2.shutdown",
+                        aria2_shutdown_params()
+                            .unwrap_or_else(|e| serde_json::Value::Array(vec![serde_json::Value::String(e)]))
+                    )
+                    .await;
+                    if let Some(child) = app.state::<Aria2Child>().0.lock().unwrap_or_else(|e| e.into_inner()).take() {
                         let _ = child.kill();
                     }
                     // Small delay so WebView2 can finish any pending I/O before

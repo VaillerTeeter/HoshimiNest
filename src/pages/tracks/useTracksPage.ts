@@ -88,14 +88,20 @@ function swapped<T>(arr: T[], i: number, j: number): T[] {
   if (i === j || i < 0 || j < 0 || i >= arr.length || j >= arr.length) {
     return [...arr];
   }
-  const result = [...arr];
-  const smallerIdx = Math.min(i, j);
-  const largerIdx = Math.max(i, j);
-  const [largerVal] = result.splice(largerIdx, 1);
-  const [smallerVal] = result.splice(smallerIdx, 1);
-  result.splice(smallerIdx, 0, largerVal);
-  result.splice(largerIdx, 0, smallerVal);
-  return result;
+  const [valI] = arr.slice(i, i + 1);
+  const [valJ] = arr.slice(j, j + 1);
+  if (valI === undefined || valJ === undefined) {
+    return [...arr];
+  }
+  return arr.map((item, idx) => {
+    if (idx === i) {
+      return valJ;
+    }
+    if (idx === j) {
+      return valI;
+    }
+    return item;
+  });
 }
 
 function moveTrackOp(

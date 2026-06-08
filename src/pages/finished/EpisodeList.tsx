@@ -1,7 +1,7 @@
 import type { Episode, Subject } from 'bangumi-api-client';
 import type { ReactElement } from 'react';
 
-import { getEpLabel, isEpAired, TODAY_STR } from './finishedUtils';
+import { getEpLabel, isEpAired } from './finishedUtils';
 
 interface EpisodeListProps {
   episodes: Episode[];
@@ -21,7 +21,7 @@ export function EpisodeList({ episodes, loading, subject }: EpisodeListProps): R
         <span className="query-detail-ep-loading">加载中…</span>
       ) : (
         episodes.map((ep) => {
-          const aired = isEpAired(ep, subject.date, TODAY_STR);
+          const aired = isEpAired(ep, subject.date ?? undefined);
           const label = getEpLabel(ep);
           const title = (ep.name_cn.length > 0 ? ep.name_cn : ep.name) || undefined;
           return (

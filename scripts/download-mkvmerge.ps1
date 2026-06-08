@@ -3,6 +3,9 @@
 
 $ErrorActionPreference = "Stop"
 
+# 强制 TLS 1.2，防止降级攻击
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 function Out-ColorLine {
     param([string]$Message, [string]$Color = 'White')
     $ansiMap = @{
@@ -47,12 +50,26 @@ $Tmp7zr = Join-Path $env:TEMP "7zr.exe"
 # ── Step 2: Download 7-zip standalone extractor ──────────────────────────
 if (-not (Test-Path $Tmp7zr)) {
     Out-ColorLine "Downloading 7zr.exe (standalone extractor)..." Cyan
-    Invoke-WebRequest -Uri "https://www.7-zip.org/a/7zr.exe" -OutFile $Tmp7zr -UseBasicParsing
+    Invoke-WebRequest -Uri "https://www.7-zip.org/a/7zr.exe" -OutFile $Tmp7zr -UseBasicParsing -TimeoutSec 120
+
+    # 校验 7zr.exe 完整性（至少 10KB，防止下载到错误页或空文件）
+    if (-not (Test-Path $Tmp7zr) -or (Get-Item $Tmp7zr).Length -lt 10240) {
+        Write-Error "7zr.exe 下载异常（文件过小或不存在），无法继续"
+    }
 }
 
 # ── Step 3: Download MKVToolNix portable archive ─────────────────────────
 Out-ColorLine "Downloading MKVToolNix $Version portable..." Cyan
-Invoke-WebRequest -Uri $DownloadUrl -OutFile $Tmp7z -UseBasicParsing
+Invoke-WebRequest -Uri $DownloadUrl -OutFile $Tmp7z -UseBasicParsing -TimeoutSec 120
+
+# 校验下载文件完整性（MKVToolNix 7z 包通常 > 10MB，防止空文件或 HTML 重定向页）
+if (-not (Test-Path $Tmp7z)) {
+    Write-Error "下载失败：文件不存在（可能网络问题或 URL 已变更）"
+}
+$sevenZipSize = (Get-Item $Tmp7z).Length
+if ($sevenZipSize -lt 10485760) {
+    Write-Error "下载文件异常（大小: ${sevenZipSize} bytes），预期 > 10MB，可能被劫持或下载了错误页面"
+}
 
 # ── Step 4: Extract only mkvmerge.exe ────────────────────────────────────
 Out-ColorLine "Extracting mkvmerge.exe..." Cyan
