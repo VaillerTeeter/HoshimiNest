@@ -45,10 +45,10 @@ $ vite
 
 | 季度查询 | 正在追番 |
 | ---------- | ---------- |
-| ![季度查询](screenshots/01-query-initial.png) | ![正在追番](screenshots/01-watching-initial.png) |
-| ![补番计划](screenshots/01-backlog-initial.png) | ![已完番剧](screenshots/01-finished-initial.png) |
-| ![搜索资源](screenshots/01-search-initial.png) | ![下载管理](screenshots/01-download-initial.png) |
-| ![轨道工坊](screenshots/01-tracks-initial.png) | |
+| ![季度查询](screenshots/01-query-initial.png)<br>*季度查询初始状态* | ![正在追番](screenshots/01-watching-initial.png)<br>*正在追番初始状态* |
+| ![补番计划](screenshots/01-backlog-initial.png)<br>*补番计划初始状态* | ![已完番剧](screenshots/01-finished-initial.png)<br>*已完番剧初始状态* |
+| ![搜索资源](screenshots/01-search-initial.png)<br>*搜索资源初始状态* | ![下载管理](screenshots/01-download-initial.png)<br>*下载管理初始状态* |
+| ![轨道工坊](screenshots/01-tracks-initial.png)<br>*轨道工坊初始状态* | |
 
 ---
 
@@ -445,15 +445,98 @@ $ vite
 
 ## 8. 下载管理
 
-> ⚠️ **待办**：本节测试手顺待补充。
+> **说明**：磁力链接的添加方式已在 [7. 搜索资源](#7-搜索资源) 中说明。
 
-磁力链接的添加方式已在 [7. 搜索资源](#7-搜索资源) 中说明。
+### 8.1 下载状态截图
+
+以下展示下载管理中各操作对应的界面状态：
+
+| | |
+| --- | --- |
+| ![两个正在下载](screenshots/08-download-two-active.png)<br>*两个正在下载* | ![暂停一个下载](screenshots/08-download-one-paused.png)<br>*暂停一个下载* |
+| ![暂停两个下载](screenshots/08-download-two-paused.png)<br>*暂停两个下载* | ![取消一个下载](screenshots/08-download-one-cancelled.png)<br>*取消一个下载* |
+| ![取消两个下载](screenshots/08-download-two-cancelled.png)<br>*取消两个下载* | ![删除一个记录](screenshots/08-download-one-deleted.png)<br>*删除一个记录* |
+
+### 8.2 下载中断
+
+1. 在下载进行中（参考 [8.1 下载状态截图](#81-下载状态截图)），点击顶栏 `X` 按钮关闭应用
+2. 重新执行 `yarn tauri dev` 启动应用
+3. 进入「下载管理」页面
+
+> **预期结果**：之前正在下载的任务显示为「中断」状态
+
+![下载中断](screenshots/08-download-close-interrupted.png)
+
+### 8.3 断点续传
+
+1. 在下载管理页面找到状态为「中断」的任务
+2. 点击该任务的「开始」/「继续」按钮
+
+> **预期结果**：任务从中断处恢复下载（断点续传），而非重新开始
+
+![断点续传](screenshots/08-download-resume.png)
+
+### 8.4 下载完成
+
+1. 等待下载任务完成
+
+> **预期结果**：任务显示为「完成」状态
+
+![下载完成](screenshots/08-download-complete.png)
+
+2. 点击已完成任务右侧的文件夹图标
+
+> **预期结果**：打开系统文件管理器并定位到下载文件所在目录
+
+![打开下载文件夹](screenshots/08-download-open-folder.png)
 
 ---
 
 ## 9. 轨道工坊
 
-> ⚠️ **待办**：本节测试手顺待补充。
+### 9.1 添加文件
+
+以下界面中框起来的区域均可点击添加文件，注意不支持拖拽添加。
+
+![添加文件区域](screenshots/09-tracks-add-files.png)
+
+### 9.2 默认布局与参数
+
+打开轨道工坊后，默认布局为：
+
+| 位置 | 用途 | 默认值 |
+| --- | --- | --- |
+| 左侧 | 视频/音频文件 | — |
+| 右侧 | 字幕文件 | — |
+| 音轨语言标签 | — | `ja` |
+| 字幕语言标签 | — | `zh-Hans` |
+| 输出文件夹 | — | 左侧文件所在文件夹 |
+| 输出文件名 | — | 自动生成 |
+
+所有参数均可手动更改。输出文件夹和文件名均可通过界面控件修改。
+
+![默认布局](screenshots/09-tracks-default-layout.png)
+
+### 9.3 加入队列
+
+设置完成后点击「加入队列」按钮，任务将被添加到处理队列中。
+
+![加入队列](screenshots/09-tracks-queued.png)
+
+### 9.4 关闭应用后队列清空
+
+轨道工坊的队列不进行持久化存储，关闭应用后所有任务数据将丢失：
+
+- **队列中的任务（pending）**：关闭后丢失，重开软件后任务队列为空
+- **正在执行的任务（running）**：关闭后子进程随应用退出终止，任务不会恢复
+
+> **预期结果**：重新进入「轨道工坊」页面后，「任务队列」区域显示为「尚无任务」。
+
+### 9.5 合并完成
+
+任务执行完成后，队列中显示为完成状态。
+
+![合并完成](screenshots/09-tracks-merge-complete.png)
 
 ---
 
