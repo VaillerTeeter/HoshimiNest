@@ -1,22 +1,31 @@
 ---
 name: PR Review Command
 
+permissions:
+  contents: read
+  pull-requests: write
+
 on:
   issue_comment:
     types: [created]
 
 jobs:
-  review:
+  ai-review:
     if: github.event.issue.pull_request && contains(github.event.comment.body, '/review')
     runs-on: ubuntu-latest
     steps:
-      - name: Review command received
-        run: |
-          echo "============================================"
-          echo " Review command triggered"
-          echo " Triggered by: @${{ github.event.comment.user.login }}"
-          echo " PR: #${{ github.event.issue.number }}"
-          echo " Comment URL: ${{ github.event.comment.html_url }}"
-          echo "============================================"
+      - name: Checkout PR code
+        uses: actions/checkout@v6
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+          fetch-depth: 0
 
-      # TODO: 在这里添加后续实际的 CI 任务
+      - name: AI Code Review
+        uses: anc95/ChatGPT-CodeReview@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.CLINE_API_KEY }}
+          OPENAI_API_ENDPOINT: https://api.cline.bot/api/v1
+          MODEL: deepseek/deepseek-v4-pro
+          LANGUAGE: Chinese
+          MAX_PATCH_LENGTH: 10000
