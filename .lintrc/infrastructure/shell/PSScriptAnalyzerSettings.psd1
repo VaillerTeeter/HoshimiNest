@@ -10,7 +10,7 @@
 
         PSAvoidLongLines = @{
             Enable            = $true
-            MaximumLineLength = 120
+            MaximumLineLength = 100
         }
 
         PSPlaceOpenBrace = @{
@@ -43,11 +43,22 @@
             CheckPipe                               = $true
             CheckPipeForRedundantWhitespace         = $true
             CheckSeparator                          = $true
-            CheckParameter                          = $false
-            IgnoreAssignmentOperatorInsideHashTable = $true
+            CheckParameter                           = $true
+            IgnoreAssignmentOperatorInsideHashTable = $false
         }
 
         PSUseCorrectCasing = @{
+            Enable = $true
+        }
+
+        # ── 命名与安全规则 ──────────────────────────────────────────
+
+        PSAvoidUsingCmdletAliases = @{
+            Enable    = $true
+            AllowList = @()  # 不允许任何别名（ls/dir/cat 等全部禁止）
+        }
+
+        PSAvoidUsingPositionalParameters = @{
             Enable = $true
         }
 
@@ -66,25 +77,19 @@
             Enable          = $true
             TargetProfiles  = @(
                 'win-8_x64_10.0.14393.0_5.1.14393.2791_x64_4.0.30319.42000_framework',
-                'win-8_x64_10.0.17763.0_5.1.17763.316_x64_4.0.30319.42000_framework',
-                'ubuntu_x64_22.04_7.4.0_x64_dotnet_7.0.0'
+                'win-8_x64_10.0.17763.0_5.1.17763.316_x64_4.0.30319.42000_framework'
             )
         }
 
         PSUseCompatibleTypes = @{
             Enable          = $true
             TargetProfiles  = @(
-                'win-8_x64_10.0.14393.0_5.1.14393.2791_x64_4.0.30319.42000_framework',
-                'ubuntu_x64_22.04_7.4.0_x64_dotnet_7.0.0'
+                'win-8_x64_10.0.14393.0_5.1.14393.2791_x64_4.0.30319.42000_framework'
             )
         }
     }
 
     ExcludeRules = @(
-        # 允许使用 Write-Host（用于控制台脚本）— 如需禁止可删除此行
-        # 'PSAvoidUsingWriteHost'
-
-        # 允许位置参数（如确有需要可取消注释）
-        # 'PSAvoidUsingPositionalParameters'
+        # 无排除项 — 所有规则均启用
     )
 }

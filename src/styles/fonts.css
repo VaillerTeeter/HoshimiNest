@@ -1,0 +1,11 @@
+/* ─────────────────────────────────────────────────
+   App font — ZCOOL KuaiLe（站酷快乐体）
+   字体文件内置，无需网络，路径相对于本 CSS 文件。
+   ───────────────────────────────────────────────── */
+@font-face {
+  font-family: 'ZCOOL KuaiLe';
+  font-style: normal;
+  font-weight: 400;
+  src: url('../assets/fonts/ZCOOLKuaiLe-Regular.ttf') format('truetype');
+  font-display: swap;
+}
