@@ -24,185 +24,177 @@
 
 ```text
 .
-├── .editorconfig                                   # 编辑器通用格式规范（缩进/换行/编码）
-├── .env.example                                    # 环境变量模板（GH_TOKEN）
-├── .gitignore                                      # Git 忽略规则
-├── .github/                                        # GitHub 仓库配置与文档
-│   ├── dependabot.yml                              # Dependabot 自动依赖更新配置
-│   ├── docs/                                       # 项目文档
+├── .clineignore
+├── .clinerules/                               # Cline AI 编码规范（自动加载）
+│   ├── backend-rules.md                       # Tauri v2 / Rust 后端规范
+│   ├── frontend-rules.md                      # React / TypeScript / CSS / Zustand 规范
+│   ├── git-workflow.md                        # Git 操作约束（MCP 写入 / git 只读）
+│   └── project-identity.md                    # 项目身份与架构声明
+├── .editorconfig                              # 编辑器通用格式规范（缩进/换行/编码）
+├── .github/                                   # GitHub 仓库配置与文档
+│   ├── ISSUE_TEMPLATE/                        # Issue 模板（中英文 bug/feature 各一份）
+│   │   ├── bug_report_en.md
+│   │   ├── bug_report_zh.md
+│   │   ├── config.yml
+│   │   ├── feature_request_en.md
+│   │   └── feature_request_zh.md
+│   ├── PULL_REQUEST_TEMPLATE.md               # PR 描述模板
+│   ├── dependabot.yml                         # Dependabot 自动依赖更新配置
+│   ├── docs/                                  # 项目文档
 │   │   ├── ci/
-│   │   │   └── ci-checks.md                       # CI 检查规则说明
-│   │   ├── hooks/
-│   │   │   └── git-guard.md                       # git-guard PreToolUse hook 说明
-│   │   ├── mcp/
-│   │   │   └── github-tools.md                    # GitHub MCP Server 工具清单
-│   │   └── settings/                              # 仓库 Settings 配置操作记录（19 个文件）
-│   ├── hooks/                                      # Git Hook 脚本
-│   │   ├── git-guard.json                         # Claude Code PreToolUse hook 注册配置
-│   │   └── scripts/
-│   │       ├── git-guard.sh                        # Linux / macOS 拦截脚本（bash + python3）
-│   │       └── git-guard.py                        # Windows 拦截脚本（纯 Python 3，无需 bash）
-│   ├── instructions/                               # GitHub Copilot 指令文件
-│   │   ├── context7.instructions.md              # Context7 MCP 文档查询规范
-│   │   ├── desktop-commander.instructions.md     # Desktop Commander MCP 文件/终端/进程操作规范
-│   │   ├── git-workflow.instructions.md           # AI git 操作行为规范
-│   │   └── react-bits.instructions.md            # React Bits 组件引入规范
-│   ├── ISSUE_TEMPLATE/                            # Issue 模板（中英文 bug/feature 各一份）
-│   ├── PULL_REQUEST_TEMPLATE.md                   # PR 描述模板
+│   │   │   └── ci-checks.md                   # CI 检查规则说明
+│   │   └── testing/
+│   │       ├── manual-test-guide.md           # 手动测试指南
+│   │       └── screenshots/                   # 测试截图（42 张）
+│   ├── scripts/
+│   │   └── ai-review.mjs                      # AI 代码审查脚本
 │   └── workflows/
-│       └── lint.yml                               # CI Lint 工作流（15 项检查）
-├── .lintrc/                                        # 各工具 Lint 配置
-│   ├── backend/rust/
-│   │   ├── .clippy.toml                           # Clippy 静态分析规则
-│   │   └── rustfmt.toml                           # Rust 代码格式化配置
-│   ├── data-formats/toml/
-│   │   └── taplo.toml                             # TOML 格式化配置
-│   ├── docs/markdown/
-│   │   └── .markdownlint.json                     # Markdown lint 规则
+│       ├── lint.yml                           # CI Lint 工作流（15 项检查）
+│       └── review-command.yml                 # Review 命令工作流
+├── .gitignore                                 # Git 忽略规则
+├── .lintrc/                                   # 各工具 Lint 配置
+│   ├── backend/
+│   │   └── rust/
+│   │       ├── .clippy.toml                   # Clippy 静态分析规则
+│   │       └── rustfmt.toml                   # Rust 代码格式化配置
+│   ├── data-formats/
+│   │   ├── toml/
+│   │   │   └── taplo.toml                     # TOML 格式化配置
+│   │   └── yaml/
+│   │       └── issue-config.schema.json       # YAML Issue 配置 schema
+│   ├── docs/
+│   │   └── markdown/
+│   │       └── .markdownlint.json             # Markdown lint 规则
 │   ├── frontend/
 │   │   ├── css-styles/
-│   │   │   └── .stylelintrc.json                  # CSS/Tailwind lint 规则
+│   │   │   └── .stylelintrc.json              # CSS/Stylelint 规则
+│   │   ├── knip.json                          # Knip 未使用导出检查配置
 │   │   ├── prettier/
-│   │   │   └── .prettierrc                        # Prettier 格式化配置
-│   │   ├── typescript/
-│   │   │   ├── .eslintrc-ts.json                  # ESLint TypeScript/React 规则
-│   │   │   └── tsconfig-lint.json                 # ESLint 专用 tsconfig
-│   │   └── knip.json                              # Knip 未使用导出检查配置
+│   │   │   └── .prettierrc                    # Prettier 格式化配置
+│   │   └── typescript/
+│   │       ├── .eslintrc-ts.json              # ESLint TypeScript/React 规则
+│   │       └── tsconfig-lint.json             # ESLint 专用 tsconfig
 │   ├── general/
-│   │   ├── .ls-lint.yml                           # 文件命名规范检查
-│   │   ├── .yamllint.yml                          # YAML lint 规则
-│   │   └── cspell.json                            # 拼写检查词典配置
+│   │   ├── .ls-lint.yml                       # 文件命名规范检查
+│   │   ├── .yamllint.yml                      # YAML lint 规则
+│   │   └── cspell.json                        # 拼写检查词典配置
 │   ├── git/
-│   │   └── .commitlintrc.cjs                      # Commit message 规范
-│   ├── infrastructure/shell/
-│   │   ├── .shellcheckrc                          # ShellCheck 配置
-│   │   └── PSScriptAnalyzerSettings.psd1          # PowerShell 静态分析规则
+│   │   └── .commitlintrc.cjs                  # Commit message 规范
+│   ├── infrastructure/
+│   │   └── shell/
+│   │       ├── .shellcheckrc                  # ShellCheck 配置
+│   │       └── PSScriptAnalyzerSettings.psd1  # PowerShell 静态分析规则
 │   └── security/
-│       └── .semgrep.yml                           # OWASP Top 10 安全扫描规则（TS + Rust）
-├── .vscode/                                        # VS Code 工作区配置
-│   ├── extensions.json                            # 推荐扩展列表
-│   └── mcp.json                                   # MCP Server 配置（GitHub MCP + Context7）
-│   └── settings.json                              # 工作区设置（格式化/lint/Tauri 等）
-├── public/                                         # 静态资源（Vite 原样复制）
+│       ├── .gitleaks.toml                     # Gitleaks 密钥泄露扫描配置
+│       └── .semgrep.yml                       # OWASP Top 10 安全扫描规则（TS + Rust）
+├── .vscode/                                   # VS Code 工作区配置
+│   ├── extensions.json                        # 推荐扩展列表
+│   └── settings.json                          # 工作区设置（格式化/lint/Tauri 等）
+├── CODE_OF_CONDUCT.md                         # 行为准则
+├── CONTRIBUTING.md                            # 贡献指南
+├── LICENSE                                    # GPL-3.0 许可证
+├── README.md                                  # 本文件
+├── SECURITY.md                                # 安全漏洞披露政策
+├── index.html                                 # Vite 入口 HTML
+├── package.json                               # npm 包定义、scripts、依赖声明
 ├── scripts/
-│   ├── download-aria2.ps1                         # 自动下载 aria2c 二进制（Tauri sidecar）
-│   ├── download-mkvmerge.ps1                      # 自动下载 mkvmerge 二进制（Tauri sidecar）
-│   └── setup-windows.ps1                          # Windows 开发环境一键检查/安装脚本
-├── src/                                            # React 前端源代码
+│   ├── download-aria2.ps1                     # 自动下载 aria2c 二进制（Tauri sidecar）
+│   ├── download-mkvmerge.ps1                  # 自动下载 mkvmerge 二进制（Tauri sidecar）
+│   └── setup-windows.ps1                      # Windows 开发环境一键检查/安装脚本
+├── src/                                       # React 前端源代码
+│   ├── App.css                                # 全局布局与组件样式（颜色全部引用 theme.css 变量）
+│   ├── App.tsx                                # 根组件（主窗口布局：顶栏 + 左侧导航栏 + 下载设置弹窗：Tracker / 高级参数 / 导入导出）
 │   ├── assets/
 │   │   └── fonts/
-│   │       └── ZCOOLKuaiLe-Regular.ttf            # 站酷快乐体（内置，无需网络）
-│   ├── pages/                                      # 页面组件（每项导航对应一个页面）
-│   │   ├── BacklogPage.tsx                        # 补番计划
-│   │   ├── DownloadPage.tsx                       # 下载管理
-│   │   ├── FinishedPage.tsx                       # 已完番剧（主文件，拆分逻辑到 finished/）
-│   │   ├── finished/                              # 已完番剧子组件
-│   │   │   ├── DetailModal.tsx                   # 番剧详情弹窗
-│   │   │   ├── EpisodeList.tsx                   # 剧集列表
-│   │   │   ├── FinishedCard.tsx                  # 番剧卡片
-│   │   │   ├── finishedUtils.ts                  # 工具函数
-│   │   │   ├── PeopleModals.tsx                  # 人物弹窗
-│   │   │   └── useSubjectData.ts                 # 番剧数据 hook
-│   │   ├── QueryPage.tsx                          # 季度查询（主文件，拆分逻辑到 QueryPage/）
-│   │   ├── QueryPage/                             # 季度查询子组件
-│   │   │   ├── CharacterModal.tsx                # 角色详情弹窗
-│   │   │   ├── FilterGroup.tsx                   # 筛选条件组
-│   │   │   ├── PersonModal.tsx                   # 人物详情弹窗
-│   │   │   ├── queryHelpers.ts                   # 查询辅助函数
-│   │   │   ├── QueryResultsView.tsx              # 查询结果视图
-│   │   │   ├── QuerySearchView.tsx               # 查询搜索视图
-│   │   │   ├── ResultsList.tsx                   # 结果列表
-│   │   │   ├── SubjectDetail.tsx                 # 番剧详情
-│   │   │   ├── useQueryPageState.ts              # 查询页面状态 hook
-│   │   │   └── useSubjectData.ts                 # 番剧数据 hook
-│   │   ├── SearchPage.tsx                         # 搜索资源（主文件，拆分逻辑到 SearchPage/）
-│   │   ├── SearchPage/                            # 资源搜索子组件
-│   │   │   ├── SearchTable.tsx                   # 搜索结果表格
-│   │   │   ├── types.ts                          # 类型定义
-│   │   │   └── useSearchPage.ts                  # 搜索页面状态 hook
-│   │   ├── TracksPage.tsx                         # 轨道工坊（主文件，拆分逻辑到 tracks/）
-│   │   ├── tracks/                                # 轨道工坊子组件
-│   │   │   ├── constants.ts                      # 常量定义
-│   │   │   ├── FilePanel.tsx                     # 文件队列面板
-│   │   │   ├── TrackRow.tsx                      # 轨道行组件
-│   │   │   ├── types.ts                          # 类型定义
-│   │   │   └── useTracksPage.ts                  # 轨道页面状态 hook
-│   │   ├── WatchingPage.tsx                       # 正在追番
-│   │   ├── WatchListPage.tsx                      # 追番列表基础页（主文件，拆分逻辑到 watchlist/）
-│   │   └── watchlist/                             # 追番列表子组件
-│   │       ├── CharactersModal.tsx               # 角色列表弹窗
-│   │       ├── constants.ts                      # 常量定义
-│   │       ├── DetailModal.tsx                   # 番剧详情弹窗
-│   │       ├── EpisodePills.tsx                  # 剧集进度胶囊
-│   │       ├── LayoutContents.tsx                # 布局内容（周历/网格）
-│   │       ├── PersonsModal.tsx                  # 人物列表弹窗
-│   │       ├── SubjectCard.tsx                   # 番剧卡片
-│   │       ├── types.ts                          # 类型定义
-│   │       └── useWatchListPage.ts               # 追番页面状态 hook
-│   ├── store/                                      # 全局状态
-│   │   ├── downloadStore.tsx                      # 下载任务 Context（状态机 + aria2 事件 + localStorage）
-│   │   └── watchStore.ts                          # 追番收藏 localStorage 工具函数
+│   │       └── ZCOOLKuaiLe-Regular.ttf        # 站酷快乐体（内置，无需网络）
+│   ├── main.tsx                               # React 入口
+│   ├── pages/                                 # 页面组件（每项导航对应一个页面）
+│   │   ├── BacklogPage.tsx                    # 补番计划
+│   │   ├── DownloadPage.tsx                   # 下载管理
+│   │   ├── FinishedPage.tsx                   # 已完番剧（主文件，拆分逻辑到 finished/）
+│   │   ├── QueryPage/                         # 季度查询子组件
+│   │   │   ├── CharacterModal.tsx             # 角色详情弹窗
+│   │   │   ├── FilterGroup.tsx                # 筛选条件组
+│   │   │   ├── PersonModal.tsx                # 人物详情弹窗
+│   │   │   ├── queryHelpers.ts                # 查询辅助函数
+│   │   │   ├── QueryResultsView.tsx           # 查询结果视图
+│   │   │   ├── QuerySearchView.tsx            # 查询搜索视图
+│   │   │   ├── ResultsList.tsx                # 结果列表
+│   │   │   ├── SubjectDetail.tsx              # 番剧详情
+│   │   │   ├── useQueryPageState.ts           # 查询页面状态 hook
+│   │   │   └── useSubjectData.ts              # 番剧数据 hook
+│   │   ├── QueryPage.tsx                      # 季度查询（主页面）
+│   │   ├── SearchPage/                        # 资源搜索子组件
+│   │   │   ├── SearchTable.tsx                # 搜索结果表格
+│   │   │   ├── types.ts                       # 类型定义
+│   │   │   └── useSearchPage.ts               # 搜索页面状态 hook
+│   │   ├── SearchPage.tsx                     # 搜索资源（主页面）
+│   │   ├── TracksPage.tsx                     # 轨道工坊（主文件，拆分逻辑到 tracks/）
+│   │   ├── WatchListPage.tsx                  # 追番列表基础页（主文件，拆分逻辑到 watchlist/）
+│   │   ├── WatchingPage.tsx                   # 正在追番
+│   │   ├── finished/                          # 已完番剧子组件
+│   │   │   ├── DetailModal.tsx                # 番剧详情弹窗
+│   │   │   ├── EpisodeList.tsx                # 剧集列表
+│   │   │   ├── FinishedCard.tsx               # 番剧卡片
+│   │   │   ├── finishedUtils.ts               # 工具函数
+│   │   │   ├── PeopleModals.tsx               # 人物弹窗
+│   │   │   └── useSubjectData.ts              # 番剧数据 hook
+│   │   ├── tracks/                            # 轨道工坊子组件
+│   │   │   ├── constants.ts                   # 常量定义
+│   │   │   ├── FilePanel.tsx                  # 文件队列面板
+│   │   │   ├── TrackRow.tsx                   # 轨道行组件
+│   │   │   ├── types.ts                       # 类型定义
+│   │   │   └── useTracksPage.ts               # 轨道页面状态 hook
+│   │   └── watchlist/                         # 追番列表子组件
+│   │       ├── CharactersModal.tsx            # 角色列表弹窗
+│   │       ├── constants.ts                   # 常量定义
+│   │       ├── DetailModal.tsx                # 番剧详情弹窗
+│   │       ├── EpisodePills.tsx               # 剧集进度胶囊
+│   │       ├── LayoutContents.tsx             # 布局内容（周历/网格）
+│   │       ├── PersonsModal.tsx               # 人物列表弹窗
+│   │       ├── SubjectCard.tsx                # 番剧卡片
+│   │       ├── types.ts                       # 类型定义
+│   │       └── useWatchListPage.ts            # 追番页面状态 hook
+│   ├── store/                                 # 全局状态
+│   │   ├── downloadStore.tsx                  # 下载任务 Context（状态机 + aria2 事件 + localStorage）
+│   │   └── watchStore.ts                      # 追番收藏 localStorage 工具函数
 │   ├── styles/
-│   │   ├── fonts.css                              # @font-face 声明（引用内置字体文件）
-│   │   └── theme.css                              # 主题 CSS 变量（皮肤切换入口）
-│   ├── App.css                                    # 全局布局与组件样式（颜色全部引用 theme.css 变量）
-│   ├── App.tsx                                    # 根组件（主窗口布局：顶栏 + 左侧导航栏 + 下载设置弹窗：Tracker / 高级参数 / 导入导出）
-│   ├── main.tsx                                   # React 入口
-│   └── vite-env.d.ts                              # Vite 类型声明
-├── src-tauri/                                      # Tauri/Rust 后端
+│   │   ├── fonts.css                          # @font-face 声明（引用内置字体文件）
+│   │   └── theme.css                          # 主题 CSS 变量（皮肤切换入口）
+│   └── vite-env.d.ts                          # Vite 类型声明
+├── src-tauri/                                 # Tauri/Rust 后端
+│   ├── Cargo.lock                             # 依赖版本锁定
+│   ├── Cargo.toml                             # Rust 包定义与依赖声明
+│   ├── app-config.json                        # Tauri 应用配置 JSON
+│   ├── build.rs                               # Tauri 构建脚本
 │   ├── capabilities/
-│   │   └── default.json                           # Tauri ACL 权限配置
-│   ├── icons/                                     # 应用图标（Windows Store 等多尺寸）
+│   │   └── default.json                       # Tauri ACL 权限配置
+│   ├── icons/                                 # 应用图标（Windows Store 等多尺寸）
+│   │   ├── 128x128.png
+│   │   ├── 128x128@2x.png
+│   │   ├── 32x32.png
+│   │   ├── Square107x107Logo.png
+│   │   ├── Square142x142Logo.png
+│   │   ├── Square150x150Logo.png
+│   │   ├── Square284x284Logo.png
+│   │   ├── Square30x30Logo.png
+│   │   ├── Square310x310Logo.png
+│   │   ├── Square44x44Logo.png
+│   │   ├── Square71x71Logo.png
+│   │   ├── Square89x89Logo.png
+│   │   ├── StoreLogo.png
+│   │   ├── icon.icns
+│   │   ├── icon.ico
+│   │   └── icon.png
 │   ├── src/
-│   │   ├── lib.rs                                 # Tauri 命令 + aria2 控制 + mkvmerge 轨道识别与合并 + BT Tracker 持久化 + 高级参数持久化（AdvancedConfig）
-│   │   └── main.rs                                # Rust 程序入口
-│   ├── build.rs                                   # Tauri 构建脚本
-│   ├── Cargo.lock                                 # 依赖版本锁定
-│   ├── Cargo.toml                                 # Rust 包定义与依赖声明
-│   └── tauri.conf.json                            # Tauri 应用配置（窗口/bundle/权限）
-├── CODE_OF_CONDUCT.md                              # 行为准则
-├── CONTRIBUTING.md                                 # 贡献指南
-├── index.html                                      # Vite 入口 HTML
-├── LICENSE                                         # GPL-3.0 许可证
-├── package.json                                    # npm 包定义、scripts、依赖声明
-├── README.md                                       # 本文件
-├── SECURITY.md                                     # 安全漏洞披露政策
-├── tsconfig.json                                   # TypeScript 编译配置（前端）
-├── tsconfig.node.json                              # TypeScript 配置（Vite 配置文件）
-└── vite.config.ts                                  # Vite 构建配置
+│   │   ├── lib.rs                             # Tauri 命令 + aria2 控制 + mkvmerge 轨道识别与合并 + BT Tracker 持久化 + 高级参数持久化（AdvancedConfig）
+│   │   └── main.rs                            # Rust 程序入口
+│   └── tauri.conf.json                        # Tauri 应用配置（窗口/bundle/权限）
+├── tsconfig.json                              # TypeScript 编译配置（前端）
+├── tsconfig.node.json                         # TypeScript 配置（Vite 配置文件）
+├── vite.config.ts                             # Vite 构建配置
+└── yarn.lock                                  # Yarn 依赖版本锁定
 ```
-
-## 本地配置
-
-1. 复制 Token 模板文件：
-
-    ```bash
-    # Linux/macOS
-    cp .env.example .env
-    # Windows PowerShell
-    Copy-Item .env.example .env
-    ```
-
-2. 编辑 `.env`，填入你的 GitHub Personal Access Token：
-
-    ```ini
-    # GitHub CLI 操作（PR / Issue / Release 等）
-    GH_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
-    ```
-
-    > Token 申请地址：GitHub → Settings → Developer settings → Personal access tokens
-
-3. 加载环境变量（每次新开终端执行一次）：
-
-    ```bash
-    export GH_TOKEN="$(grep '^GH_TOKEN=' .env | cut -d= -f2- | tr -d '\r')"
-    ```
-
-4. 验证配置：
-
-    ```bash
-    gh auth status
-    ```
 
 ## 开发工作流
 
@@ -216,30 +208,15 @@
 
 # 2. 安装 npm 依赖
 yarn install
-
-# 3. 下载 aria2c 二进制（Tauri sidecar，首次必须执行）
-.\scripts\download-aria2.ps1
-
-# 4. 下载 mkvmerge 二进制（Tauri sidecar，轨道合并功能必须执行）
-.\scripts\download-mkvmerge.ps1
 ```
 
-脚本会依次检查：winget → Node.js v24 → yarn → rustup → Rust stable MSVC 工具链 → C++ Build Tools → WebView2 → Tauri CLI。
-
-**WSL / Linux / macOS（仅浏览器预览，不支持 Tauri 桌面窗口）**：
-
-```bash
-yarn install
-```
+脚本会依次检查：winget → Node.js v24 → yarn → rustup → Rust stable MSVC 工具链 → C++ Build Tools → WebView2 → Tauri CLI → aria2c sidecar 下载 → mkvmerge sidecar 下载。
 
 ### 日常开发
 
 ```bash
 # Windows PowerShell — 启动完整 Tauri 桌面窗口（热重载）
 yarn tauri dev
-
-# WSL / macOS 浏览器预览（Vite dev server，localhost:1520）
-yarn dev
 ```
 
 ### 构建
@@ -277,23 +254,6 @@ yarn tauri build
 | knip-lint | Knip | `src/**` |
 | ls-lint | ls-lint | 全仓库文件命名 |
 
-## AI Agent 开发说明
-
-本项目主要通过 AI Agent（GitHub Copilot）进行日常开发和维护工作。
-
-在每次会话开始时，请发送以下提示词，让 AI 优先读取项目规范后再开始工作：
-
-> 开始工作前，先读取 `.github/` 目录下所有 `.instructions.md` 文件，完全理解其中的规则后再响应。
-
-目前包含的指令文件：
-
-| 文件 | 说明 |
-| --- | --- |
-| `context7.instructions.md` | 库/框架文档查询规范（Context7 MCP 工具调用顺序与 library ID 选择） |
-| `desktop-commander.instructions.md` | Desktop Commander MCP 文件/终端/进程操作规范（文件读写、命令执行、代码搜索、进程管理） |
-| `git-workflow.instructions.md` | AI git 操作行为规范（授权要求、分支命名、提交规范、PR 工作流） |
-| `react-bits.instructions.md` | React Bits 动效组件引入规范（源码复制方式，非 npm 包） |
-
 ## 相关链接
 
 ### 本项目
@@ -320,8 +280,6 @@ yarn tauri build
 ### 前端 UI
 
 - [animal-island-ui](https://github.com/ShenQingchuan/animal-island-ui) — 项目使用的 React 组件库（Button / Icon / Modal / Table 等）
-- [Motion](https://motion.dev/) — React 动画库（`motion/react`）
-- [React Bits](https://reactbits.dev/) — 动效组件源码库（源码复制方式引入，非 npm 包）
 
 ### Bangumi API 客户端
 

@@ -1,4 +1,17 @@
-# 密钥 / 环境变量（禁止提交到仓库）
-.env
-
+# ===== Node.js =====
+# 依赖目录
 node_modules/
+# Vite 打包产物
+dist/
+
+# ===== Tauri / Rust =====
+# Cargo 编译产物
+src-tauri/target/
+# Tauri CLI 自动生成的 schema
+src-tauri/gen/schemas
+# Tauri sidecar 二进制文件
+src-tauri/binaries/
+
+# ===== Cline =====
+# rules 中文翻译 / 临时文件
+tmp/

@@ -7,7 +7,7 @@
 
   "ignore": [],
 
-  "ignoreDependencies": ["@tauri-apps/plugin-opener", "motion"],
+  "ignoreDependencies": ["@tauri-apps/plugin-opener"],
 
   "ignoreBinaries": ["commitlint", "cspell", "eslint", "prettier", "stylelint"],
 
