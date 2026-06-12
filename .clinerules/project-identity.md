@@ -39,35 +39,53 @@ Bundled with the app via `externalBin`:
 - `aria2c` — download engine
 - `mkvmerge` — media remuxing
 
+## Development Environment
+
+- **OS**: Windows only — NEVER assume macOS/Linux/WSL paths or tools
+- **Shell**: PowerShell (`.ps1` scripts) — NEVER write `.sh` or bash scripts
+- **Terminal commands**: always use PowerShell syntax; NEVER use Unix-only flags or pipes
+
 ## Directory Structure
 
 ```text
-src/                        # React frontend
-  pages/                    # page-level components, one file per route
-    BacklogPage.tsx
-    DownloadPage.tsx
-    FinishedPage.tsx
-    QueryPage.tsx / QueryPage/
-    SearchPage.tsx / SearchPage/
-    TracksPage.tsx / tracks/
-    WatchingPage.tsx
-    WatchListPage.tsx / watchlist/
-    FinishedPage.tsx / finished/
-  store/                    # Zustand stores
-    downloadStore.tsx
-    watchStore.ts
-  styles/                   # global CSS
-    theme.css
-    fonts.css
-  assets/                   # static assets
-src-tauri/                  # Rust backend
-  src/
-    lib.rs                  # Tauri commands + plugin registration
-    main.rs                 # entry point
-  capabilities/             # Tauri capability config
-  app-config.json           # compile-time config (BT trackers, ports, cache)
-  tauri.conf.json           # Tauri config (window, bundle, CSP, externalBin)
-scripts/                    # dev / setup scripts (.ps1)
+src/                                       # React frontend source
+  ├── App.css                              # global layout & component styles (colors reference theme.css vars)
+  ├── App.tsx                              # root component (topbar + sidebar nav + download settings modal)
+  ├── assets/
+  │   └── fonts/                           # bundled font files
+  ├── main.tsx                             # React entry point
+  ├── pages/                               # page-level components (one per nav item)
+  │   ├── BacklogPage.tsx                  # backlog / plan-to-watch
+  │   ├── DownloadPage.tsx                 # download manager
+  │   ├── FinishedPage.tsx                 # completed anime (main file, sub-logic in finished/)
+  │   ├── QueryPage.tsx                    # seasonal query (main page)
+  │   ├── QueryPage/                       # seasonal query sub-components
+  │   ├── SearchPage.tsx                   # resource search (main page)
+  │   ├── SearchPage/                      # resource search sub-components
+  │   ├── TracksPage.tsx                   # track workshop (main file, sub-logic in tracks/)
+  │   ├── WatchingPage.tsx                 # currently watching
+  │   ├── WatchListPage.tsx                # watchlist base (main file, sub-logic in watchlist/)
+  │   ├── finished/                        # completed anime sub-components
+  │   ├── tracks/                          # track workshop sub-components
+  │   └── watchlist/                       # watchlist sub-components
+  ├── store/                               # global state
+  │   ├── downloadStore.tsx                # download task context (state machine + aria2 events + localStorage)
+  │   └── watchStore.ts                    # watchlist localStorage helpers
+  ├── styles/
+  │   ├── fonts.css                        # @font-face declarations
+  │   └── theme.css                        # theme CSS variables
+  └── vite-env.d.ts                        # Vite type declarations
+src-tauri/                                 # Tauri/Rust backend
+  ├── app-config.json                      # compile-time config (BT trackers, ports, cache)
+  ├── build.rs                             # Tauri build script
+  ├── capabilities/
+  │   └── default.json                     # Tauri ACL capability config
+  ├── icons/                               # app icons
+  ├── src/
+  │   ├── lib.rs                           # Tauri commands + aria2 control + mkvmerge track merge
+  │   └── main.rs                          # Rust entry point
+  └── tauri.conf.json                      # Tauri app config (window/bundle/permissions)
+scripts/                                   # dev & setup scripts (.ps1)
 ```
 
 ## Package Rules

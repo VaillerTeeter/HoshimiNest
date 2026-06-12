@@ -246,6 +246,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      statuses: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -256,8 +257,9 @@ jobs:
         with:
           directory: .
           blocking: warning
-          comment: "true"
-          review-comments: "true"
+          comment: true
+          review-comments: true
+          project: ""
 
   # ============================================================
   # PowerShell

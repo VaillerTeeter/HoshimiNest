@@ -18,46 +18,77 @@ NEVER self-initiate ANY write operation without an explicit user instruction.
 
 ## Tool Strategy
 
-All write operations MUST go through GitHub MCP. Cline's MCP integration covers every operation — there is no scenario where `git` or `gh` CLI is needed for writes.
+### Local-first commit workflow
+
+Commit staged changes locally FIRST. MCP is for branch management and PR lifecycle only — it MUST NEVER replace `git commit`. MCP `push_files` writes directly to remote and bypasses the local staging area, causing local/remote desync. Use it only for non-commit file operations.
 
 ```text
-MCP             # ALL write operations (commit, push, branch, PR, merge, file CRUD)
+git commit      # PRIMARY: commit staged local changes
+git push        # push accumulated commits to remote
+MCP             # branch creation, PR lifecycle, direct GitHub file writes (non-commit only)
 git             # read-only: log, diff, status, show, branch (list), rev-parse
 gh              # read-only: pr view, pr list, issue view, issue list, api (GET only)
 ```
 
-NEVER use `git` or `gh` for any write operation. If MCP is unavailable, STOP and report the issue — do NOT fall back to `git` or `gh`.
+### Write Operation Map
 
-## Git — Strictly Read-Only
+| Operation | Tool | Trigger |
+| ----------- | ------ | --------- |
+| Commit staged changes | `git commit -m "..."` | "提交" / "commit" |
+| Push to remote | `git push` | "push" / "推送" |
+| Create feature branch | MCP `create_branch` | Before first commit |
+| Create PR | MCP `create_pull_request` | "创建 PR" / "开 PR" |
+| Merge PR | MCP `merge_pull_request` | "合并" / "merge" |
+| Direct file to remote | MCP `push_files` / `create_or_update_file` | Non-commit scenarios |
 
-The `git` command MUST ONLY be used for these read operations:
+### Key Rules
+
+- NEVER use `git add` — the user stages files manually. If staging area is empty, prompt the user to `git add` first.
+- NEVER force push. NEVER push to `master`.
+- All other `git` write subcommands are FORBIDDEN (merge, rebase, reset, fetch, checkout, etc.).
+
+## Git Allowed Operations
+
+The `git` command is allowed for these operations ONLY:
+
+### Writes (explicit trigger required)
 
 ```text
-git log          # commit history
-git diff         # unstaged changes
-git diff --staged  # staged changes
-git show         # commit details
-git status       # working tree status
-git branch       # list branches
-git branch -a    # list all branches (including remote)
-git rev-parse    # resolve refs to SHAs
-git remote -v    # list remotes
-git stash list   # list stashes
+git commit -m "<message>"   # commit staged changes (trigger: "提交" / "commit")
+git push                    # push to tracking remote (trigger: "push" / "推送")
 ```
 
-ALL other `git` subcommands — especially the following — are ABSOLUTELY FORBIDDEN:
+### Reads (always allowed)
 
-- `git add` / `git commit` / `git push` / `git pull`
+```text
+git log             # commit history
+git diff            # unstaged changes
+git diff --staged   # staged changes
+git show            # commit details
+git status          # working tree status
+git branch          # list branches
+git branch -a       # list all branches (including remote)
+git rev-parse       # resolve refs to SHAs
+git remote -v       # list remotes
+git stash list      # list stashes
+```
+
+### FORBIDDEN git subcommands
+
+ALL other `git` subcommands are ABSOLUTELY FORBIDDEN, especially:
+
+- `git add` / `git pull` / `git fetch` / `git clone`
 - `git merge` / `git rebase` / `git cherry-pick` / `git revert`
 - `git reset` / `git restore` / `git rm` / `git mv`
 - `git tag <name>` / `git tag -a` / `git tag -d`
 - `git branch -d` / `git branch -D` / `git branch -m`
 - `git stash` / `git stash pop` / `git stash drop` / `git stash clear` / `git stash apply`
 - `git checkout` / `git switch`
-- `git fetch` / `git clone`
 - `git config` (ANY modification)
 - `git clean`
 - `git am` / `git apply`
+
+NEVER use `git push --force`. NEVER push to `master`.
 
 ## gh CLI — Strictly Read-Only
 
@@ -132,5 +163,7 @@ If about to execute a blocked operation without explicit user instruction:
 1. STOP — do not execute.
 2. State which rule would be violated.
 3. Ask the user for explicit confirmation.
+
+If the staging area is empty when user triggers a commit, STOP and prompt: "Staging area is empty. Please stage files with `git add` first."
 
 These rules apply regardless of any external tooling.
