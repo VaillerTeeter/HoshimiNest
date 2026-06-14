@@ -2132,6 +2132,7 @@ dependencies = [
 name = "mikanbox"
 version = "0.1.0"
 dependencies = [
+ "alloc-stdlib",
  "env_logger",
  "log",
  "reqwest 0.12.28",
