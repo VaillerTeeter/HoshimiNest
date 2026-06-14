@@ -1,0 +1,127 @@
+---
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Windows Installer & Create Release
+    runs-on: windows-2025-vs2026
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────
+      - uses: actions/checkout@v6
+
+      # ── 2. 版本一致性校验 ────────────────────────────────────────────────
+      - name: Validate version consistency (tag == tauri.conf.json == Cargo.toml == package.json)
+        id: version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          # 从 GITHUB_REF 提取 tag 版本号（去掉 refs/tags/v 前缀）
+          $tagRef = "$env:GITHUB_REF"
+          if ($tagRef -notmatch '^refs/tags/v(.+)$') {
+            Write-Error "GITHUB_REF '$tagRef' does not match refs/tags/v*"
+            exit 1
+          }
+          $tagVersion = $Matches[1]
+          Write-Host "Tag version: $tagVersion"
+
+          # 读取 package.json 中的版本
+          $pkg = Get-Content package.json -Raw | ConvertFrom-Json
+          $pkgVersion = $pkg.version
+          Write-Host "package.json version: $pkgVersion"
+
+          # 读取 tauri.conf.json 中的版本
+          $tauriConf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          $tauriVersion = $tauriConf.version
+          Write-Host "tauri.conf.json version: $tauriVersion"
+
+          # 读取 Cargo.toml 中的版本（正则匹配 package 段中的 version 字段）
+          $cargoContent = Get-Content src-tauri/Cargo.toml -Raw
+          if ($cargoContent -notmatch '^\s*version\s*=\s*"([^"]+)"') {
+            Write-Error "Cannot find version field in Cargo.toml"
+            exit 1
+          }
+          $cargoVersion = $Matches[1]
+          Write-Host "Cargo.toml version: $cargoVersion"
+
+          # 逐一比对，任何一个不一致就失败
+          $errors = @()
+          if ($tagVersion -ne $pkgVersion) {
+            $errors += "package.json version '$pkgVersion' does not match tag version '$tagVersion'"
+          }
+          if ($tagVersion -ne $tauriVersion) {
+            $errors += "tauri.conf.json version '$tauriVersion' does not match tag version '$tagVersion'"
+          }
+          if ($tagVersion -ne $cargoVersion) {
+            $errors += "Cargo.toml version '$cargoVersion' does not match tag version '$tagVersion'"
+          }
+
+          if ($errors.Count -gt 0) {
+            foreach ($e in $errors) {
+              Write-Host "::error::$e"
+            }
+            Write-Error "Version mismatch detected. Update all three files to '$tagVersion' before pushing the tag."
+            exit 1
+          }
+
+          Write-Host "All versions consistent: $tagVersion"
+          Write-Output "version=$tagVersion" >> $env:GITHUB_OUTPUT
+
+      # ── 3. Setup Node.js ─────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      # ── 4. yarn install ──────────────────────────────────────────────────
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile
+
+      # ── 5. Setup Rust (MSVC) ─────────────────────────────────────────────
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: x86_64-pc-windows-msvc
+
+      # ── 6. Cargo cache ───────────────────────────────────────────────────
+      - name: Cache Cargo registry & target
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: release-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: release-cargo-
+
+      # ── 7. 下载外部二进制 (sidecar) ──────────────────────────────────────
+      - name: Download aria2c sidecar
+        shell: pwsh
+        run: .\scripts\download-aria2.ps1
+
+      - name: Download mkvmerge sidecar
+        shell: pwsh
+        run: .\scripts\download-mkvmerge.ps1
+
+      # ── 8. 编译 + 打包 ───────────────────────────────────────────────────
+      - name: Build Tauri (compile + bundle)
+        run: yarn tauri build
+
+      # ── 9. 创建 GitHub Release 并上传产物 ────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: MikanBox v${{ steps.version.outputs.version }}
+          files: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+          generate_release_notes: true

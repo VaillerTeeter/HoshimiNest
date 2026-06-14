@@ -5,6 +5,7 @@
 | 工作流 | 文件 | 说明 |
 | --- | --- | --- |
 | Lint | [lint.yml](../../../.github/workflows/lint.yml) | 代码质量、格式、安全扫描 |
+| PR Review Command | [review-command.yml](../../../.github/workflows/review-command.yml) | AI 代码审查（`/review`、`/review-all` 命令） |
 
 ---
 
@@ -206,6 +207,20 @@
 
 ---
 
+## React Doctor
+
+**工具**：[React Doctor](https://github.com/millionco/react-doctor)（`millionco/react-doctor@main`）
+**用途**：React 代码质量扫描，检测组件过度渲染、不必要的 memoization 等问题
+**权限**：`contents: read`、`pull-requests: write`、`statuses: write`
+
+| 配置项 | 值 | 说明 |
+| --- | --- | --- |
+| `blocking` | `warning` | Warning 级别意见会阻止通过 |
+| `comment` | `true` | 在 PR 中发布审查摘要评论 |
+| `review-comments` | `true` | 以 PR review comments 形式发布逐行诊断 |
+
+---
+
 ## Secret Scan
 
 **工具**：[Gitleaks](https://github.com/gitleaks/gitleaks-action) v2
@@ -311,3 +326,65 @@
 | `src-tauri/` | `.toml` / `.json` | `kebab-case` 或 `snake_case` |
 
 **忽略路径**：`.git`、`node_modules`、`dist`、`src-tauri/target`
+
+---
+
+## Summary Gate
+
+Lint 工作流中所有独立 job 通过后，`all-checks` 汇总 gate 将所有结果聚合为单一状态检查 `All Lint Checks Passed`。
+
+| 前置 job | 说明 |
+| --- | --- |
+| `markdown-lint` | Markdown 格式 |
+| `yaml-lint` | YAML 格式 |
+| `toml-lint` | TOML 格式 |
+| `typescript-lint` | TypeScript / React（ESLint + Prettier + tsc） |
+| `stylelint-lint` | CSS |
+| `rust-lint` | Rust（clippy + rustfmt） |
+| `shell-lint` | Shell 脚本 |
+| `react-doctor` | React 代码质量扫描 |
+| `powershell-lint` | PowerShell 脚本 |
+| `secret-scan` | Gitleaks 密钥泄漏扫描 |
+| `semgrep-scan` | Semgrep 安全扫描 |
+| `commitlint-lint` | 提交信息规范 |
+| `cspell-lint` | 拼写检查 |
+| `knip-lint` | 死代码检测 |
+| `ls-lint` | 文件命名规范 |
+
+**机制**：使用 `if: always()` 确保 gate 始终运行，通过 `needs.*.result` 检查所有前置 job 的结果。任何 job 失败或取消时，gate 报错退出。此 gate 被配置为仓库的必需状态检查，必须通过方可合并 PR。
+
+---
+
+## PR Review Command 工作流
+
+通过 PR 评论中的命令触发 AI 代码审查，由 [.github/workflows/review-command.yml](../../../.github/workflows/review-command.yml) 定义。
+
+### 触发方式
+
+在 PR 中发布 issue comment 包含以下命令：
+
+| 命令 | 审查范围 | 说明 |
+| --- | --- | --- |
+| `/review` | 增量（diff） | 仅审查当前 PR 的变更 |
+| `/review-all` | 全量（full） | 审查 PR 涉及的全部文件 |
+
+### 执行流程
+
+1. **检出 PR 代码**：`refs/pull/<number>/head`
+2. **设置 Node.js 24** 环境
+3. **执行**：`node .github/scripts/ai-review.mjs`
+
+### 环境变量
+
+| 变量 | 说明 |
+| --- | --- |
+| `GITHUB_TOKEN` | `${{ secrets.GITHUB_TOKEN }}` |
+| `OPENAI_API_KEY` | `${{ secrets.CLINE_API_KEY }}` |
+| `OPENAI_API_ENDPOINT` | `https://api.cline.bot/api/v1` |
+| `MODEL` | `deepseek/deepseek-v4-pro` |
+| `LANGUAGE` | `Chinese`（审查意见语言） |
+| `REVIEW_MODE` | 根据命令自动设置（`full` 或 `diff`） |
+
+### 权限
+
+`contents: read`、`pull-requests: write`（需要 `pull-requests: write` 以发布审查评论）

@@ -1133,6 +1133,13 @@ pub fn run() {
                     // This re-triggers CloseRequested but the flag is now true,
                     // so we skip prevent_close and the window closes gracefully.
                     let _ = win.close();
+                    // Wait for WebView2 to flush localStorage to disk after the
+                    // window is destroyed, then explicitly exit with code 0 so
+                    // that `cargo run` / `yarn tauri dev` don't report a
+                    // spurious error (Windows default exit code for window-close
+                    // termination is 0xFFFFFFFF).
+                    tokio::time::sleep(Duration::from_millis(300)).await;
+                    std::process::exit(0);
                 });
             }
         })
