@@ -17,14 +17,14 @@ function parseNyaaHtml(html: string): NyaaResult[] {
       return;
     }
     const nameEl = tds[1].querySelector('a[href^="/view/"]:not([href*="#"])');
-    const name = nameEl?.textContent?.trim() ?? '';
+    const name = nameEl?.textContent.trim() ?? '';
     const magnetEl = tds[2].querySelector('a[href^="magnet:"]');
     const magnet = magnetEl?.getAttribute('href') ?? '';
-    const size = tds[3].textContent?.trim() ?? '';
-    const date = tds[4].textContent?.trim() ?? '';
-    const seeders = Number.parseInt(tds[5].textContent?.trim() ?? '0', 10);
-    const leechers = Number.parseInt(tds[6].textContent?.trim() ?? '0', 10);
-    const completed = Number.parseInt(tds[7].textContent?.trim() ?? '0', 10);
+    const size = tds[3].textContent.trim();
+    const date = tds[4].textContent.trim();
+    const seeders = Number.parseInt(tds[5].textContent.trim(), 10);
+    const leechers = Number.parseInt(tds[6].textContent.trim(), 10);
+    const completed = Number.parseInt(tds[7].textContent.trim(), 10);
     if (name) {
       results.push({ key: String(i), name, magnet, size, date, seeders, leechers, completed });
     }
