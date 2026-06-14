@@ -246,6 +246,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      statuses: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -256,15 +257,16 @@ jobs:
         with:
           directory: .
           blocking: warning
-          comment: "true"
-          review-comments: "true"
+          comment: true
+          review-comments: true
+          project: ""
 
   # ============================================================
   # PowerShell
   # ============================================================
   powershell-lint:
     name: PowerShell Lint (PSScriptAnalyzer)
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     steps:
       - uses: actions/checkout@v6
 
@@ -296,11 +298,10 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          config-path: .lintrc/security/.gitleaks.toml
+          GITLEAKS_CONFIG: .lintrc/security/.gitleaks.toml
 
   # ============================================================
   # Semgrep security scan

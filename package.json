@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "rustcheck": "cd src-tauri && cargo check"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -15,11 +16,11 @@
     "@tauri-apps/plugin-opener": "^2",
     "animal-island-ui": "^0.9.4",
     "bangumi-api-client": "^2026.5.1",
-    "motion": "^12.40.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@commitlint/types": "^21.0.1",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

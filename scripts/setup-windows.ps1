@@ -232,12 +232,48 @@ else {
     }
 }
 
+# ─── 9. aria2c sidecar ───────────────────────────────────────────────────────
+Write-Section "aria2c sidecar"
+$Aria2Target = "$PSScriptRoot\..\src-tauri\binaries\aria2c-x86_64-pc-windows-msvc.exe"
+if (Test-Path $Aria2Target) {
+    Write-OK "aria2c 已内嵌"
+}
+else {
+    Write-INFO "aria2c 未找到，正在下载..."
+    & "$PSScriptRoot\download-aria2.ps1"
+    if ($LASTEXITCODE -eq 0) {
+        Write-FIXED "aria2c sidecar 下载完成"
+    }
+    else {
+        Write-FAIL "aria2c 下载失败"
+        $issues += "aria2c"
+    }
+}
+
+# ─── 10. mkvmerge sidecar ─────────────────────────────────────────────────────
+Write-Section "mkvmerge sidecar"
+$MkvTarget = "$PSScriptRoot\..\src-tauri\binaries\mkvmerge-x86_64-pc-windows-msvc.exe"
+if (Test-Path $MkvTarget) {
+    Write-OK "mkvmerge 已内嵌"
+}
+else {
+    Write-INFO "mkvmerge 未找到，正在下载..."
+    & "$PSScriptRoot\download-mkvmerge.ps1"
+    if ($LASTEXITCODE -eq 0) {
+        Write-FIXED "mkvmerge sidecar 下载完成"
+    }
+    else {
+        Write-FAIL "mkvmerge 下载失败"
+        $issues += "mkvmerge"
+    }
+}
+
 # ─── 汇总 ────────────────────────────────────────────────────────────────────
 Write-Section "检测结果汇总"
 if ($issues.Count -eq 0) {
     Out-ColorLine "`n  环境检测通过！下一步：" Green
     Out-ColorLine "    cd MikanBox" White
-    Out-ColorLine "    yarn            # 安装前端依赖（首次）" White
+    Out-ColorLine "    yarn install    # 安装前端依赖（首次）" White
     Out-ColorLine "    yarn tauri dev  # 启动 Tauri 开发窗口" White
 }
 else {

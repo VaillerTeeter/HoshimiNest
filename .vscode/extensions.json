@@ -70,6 +70,9 @@
     "christian-kohler.path-intellisense",
     "kisstkondoros.vscode-gutter-preview",
     "adpyke.codesnap",
-    "tauri-apps.tauri-vscode"
+
+    // ── AI / 辅助 ─────────────────────────────────────────
+    "saoudrizwan.claude-dev",
+    "tomoki1207.pdf"
   ]
 }

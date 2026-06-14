@@ -1,58 +1,4 @@
 {
-  // GitHub Copilot 工具审批策略
-  // chat.tools.autoApprove 留空 = 所有工具操作均需手动确认（默认行为）
-  "chat.tools.autoApprove": [
-    // 终端命令仅批准精确匹配；不使用通配符，避免通过重定向、链式执行等方式绕过审批
-    "run_in_terminal:cd",
-    "run_in_terminal:ls",
-    "run_in_terminal:which",
-    "run_in_terminal:pwd",
-    "run_in_terminal:head",
-    "run_in_terminal:tail",
-    "run_in_terminal:wc",
-    "run_in_terminal:du",
-    "run_in_terminal:df",
-    // 终端只读命令 — git
-    "run_in_terminal:git log",
-    "run_in_terminal:git diff",
-    "run_in_terminal:git status",
-    // git branch 只批准精确列出操作（不加通配符，避免 -d / -D / --delete 等删除命令被误批）
-    "run_in_terminal:git branch",
-    "run_in_terminal:git branch -v",
-    "run_in_terminal:git branch -a",
-    "run_in_terminal:git branch -r",
-    "run_in_terminal:git branch --list",
-    "run_in_terminal:git remote",
-    "run_in_terminal:git show",
-    "run_in_terminal:git stash list",
-    // git tag 只批准列出操作
-    "run_in_terminal:git tag",
-    "run_in_terminal:git tag -l",
-    "run_in_terminal:git tag --list",
-    // 终端只读命令 — Node / npm
-    "run_in_terminal:node --version",
-    "run_in_terminal:npm list",
-    // GitHub MCP — 只读类（查询不修改）
-    "mcp_github_list_issues",
-    "mcp_github_get_issue",
-    "mcp_github_search_issues",
-    "mcp_github_list_pull_requests",
-    "mcp_github_get_pull_request",
-    "mcp_github_get_pull_request_files",
-    "mcp_github_get_pull_request_status",
-    "mcp_github_get_pull_request_reviews",
-    "mcp_github_get_pull_request_comments",
-    "mcp_github_get_file_contents",
-    "mcp_github_list_commits",
-    "mcp_github_search_repositories",
-    "mcp_github_search_code",
-    "mcp_github_search_users"
-    // ⚠️ 写操作（create / update / merge / push）故意不加，保持手动确认
-  ],
-
-  // Agent 模式单次会话最大自动请求次数（当前设为 1000，允许单次会话连续执行多个工具调用；若设为 1，则每次工具调用后都必须停下等待用户确认）
-  "chat.agent.maxRequests": 1000,
-
   // 显式声明远程 JSON Schema，避免 VS Code JSON 语言服务器报"不受信任"警告
   "json.schemas": [
     {
@@ -64,6 +10,12 @@
       "fileMatch": [".lintrc/general/cspell.json"]
     }
   ],
+
+  // 显式指定 .clineignore 为 ignore 语言类型，防止 VS Code 自动检测误判为 Markdown
+  "files.associations": {
+    ".clineignore": "ignore",
+    "LICENSE": "ignore"
+  },
 
   // cSpell：从 .lintrc/general/cspell.json 导入词表（CI 的唯一权威来源）
   // VS Code 扩展会合并导入配置中的 words / ignoreWords / flagWords，
@@ -113,19 +65,9 @@
   // 斜体使用 * 而不是 _（与 GFM 推荐一致）
   "markdown.extension.italic.indicator": "*",
 
-  // markdownlint — 规则微调
+  // markdownlint — 引用 .lintrc 中的项目配置，与 CI 保持一致
   "markdownlint.config": {
-    // MD013: 行长度限制 — 关闭（文档行长通常不做硬性限制）
-    "MD013": false,
-    // MD033: 禁止内联 HTML — 关闭（README 里常用 <br> <details> 等）
-    "MD033": false,
-    // MD041: 文件首行必须是 h1 — 关闭（CONTRIBUTING / SECURITY 等文件首行不一定是标题）
-    "MD041": false
-  },
-
-  // Markdown 文件豁免行尾空格裁剪（两个空格 = <br> 换行，不能删）
-  "[markdown]": {
-    "trailing-spaces.trimOnSave": false
+    "extends": ".lintrc/docs/markdown/.markdownlint.json"
   },
 
   // ── TypeScript / JavaScript (ESLint + Prettier) ───────────
@@ -190,9 +132,13 @@
   "shellformat.flag": "-i 2 -ci -bn",
 
   // ── YAML (redhat.vscode-yaml) ─────────────────────────────
-  // Schema 关联：对 GitHub Actions / Dependabot 文件提供智能补全和验证
+  // Schema 关联：为 YAML 文件提供智能补全和验证
   "yaml.schemas": {
+    // Issue 模板：使用本地 schema（url 允许 mailto: 链接）
+    ".lintrc/data-formats/yaml/issue-config.schema.json": ".github/ISSUE_TEMPLATE/config.yml",
+    // GitHub Actions 工作流
     "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml",
+    // Dependabot 配置
     "https://json.schemastore.org/dependabot-2.0.json": ".github/dependabot.yml"
   },
   // 禁用插件内置格式化（改用 Prettier，避免两者冲突）
@@ -223,6 +169,10 @@
   "evenBetterToml.formatter.trailingNewline": true,
 
   // ── Rust (rust-lang.rust-analyzer) ───────────────────────
+  // 指定 Cargo 项目根目录，让 rust-analyzer 正确解析 build.rs 生成的 OUT_DIR
+  "rust-analyzer.linkedProjects": [
+    "src-tauri/Cargo.toml"
+  ],
   "[rust]": {
     "editor.defaultFormatter": "rust-lang.rust-analyzer",
     "editor.formatOnSave": true
