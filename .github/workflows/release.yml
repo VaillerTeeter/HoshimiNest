@@ -118,7 +118,7 @@ jobs:
 
       # ── 9. 创建 GitHub Release 并上传产物 ────────────────────────────────
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: MikanBox v${{ steps.version.outputs.version }}
           files: |
