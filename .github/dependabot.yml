@@ -1,6 +1,20 @@
 ---
 version: 2
 updates:
+  # 自动更新 npm (yarn) 依赖
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
   # 自动更新 GitHub Actions 依赖
   - package-ecosystem: "github-actions"
     directory: "/"

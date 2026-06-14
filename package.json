@@ -15,7 +15,7 @@
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-opener": "^2",
     "animal-island-ui": "^0.9.4",
-    "bangumi-api-client": "^2026.5.1",
+    "bangumi-api-client": "^2026.6.14",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

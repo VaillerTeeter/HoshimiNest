@@ -234,26 +234,6 @@ yarn tauri build
 
 > 详细的 CI 检查规则文档已独立维护，请参阅 [ci-checks.md](.github/docs/ci/ci-checks.md)。
 
-`lint.yml` 包含以下 15 项检查：
-
-| 检查项 | 工具 | 覆盖范围 |
-| --- | --- | --- |
-| markdown-lint | markdownlint-cli | `**/*.md` |
-| yaml-lint | yamllint | `**/*.{yml,yaml}` |
-| toml-lint | taplo | `**/*.toml` |
-| typescript-lint | ESLint + Prettier | `src/**/*.{ts,tsx}` |
-| stylelint-lint | Stylelint | `src/**/*.css` |
-| rust-lint | clippy + rustfmt | `src-tauri/src/**/*.rs` |
-| shell-lint | ShellCheck | `**/*.sh` |
-| react-doctor | millionco/react-doctor | `src/` |
-| powershell-lint | PSScriptAnalyzer | `**/*.ps1` |
-| secret-scan | Gitleaks | 全仓库 |
-| semgrep-scan | Semgrep | `src/` + `src-tauri/src/` |
-| commitlint-lint | commitlint | Commit messages |
-| cspell-lint | CSpell | 全仓库文本 |
-| knip-lint | Knip | `src/**` |
-| ls-lint | ls-lint | 全仓库文件命名 |
-
 ## 相关链接
 
 ### 本项目
