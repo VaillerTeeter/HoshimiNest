@@ -46,7 +46,7 @@ jobs:
 
           # 读取 Cargo.toml 中的版本（正则匹配 package 段中的 version 字段）
           $cargoContent = Get-Content src-tauri/Cargo.toml -Raw
-          if ($cargoContent -notmatch '^\s*version\s*=\s*"([^"]+)"') {
+          if ($cargoContent -notmatch '(?m)^\s*version\s*=\s*"([^"]+)"') {
             Write-Error "Cannot find version field in Cargo.toml"
             exit 1
           }
