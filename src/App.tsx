@@ -160,7 +160,7 @@ interface TopbarTitleProps {
 function TopbarTitle({ currentLabel, page, queryTitleParts }: TopbarTitleProps): React.JSX.Element {
   return (
     <span className="topbar-title">
-      MikanBox - {currentLabel}
+      HoshimiNest - {currentLabel}
       {page === 'query' && queryTitleParts !== null && (
         <>
           {' '}
@@ -222,7 +222,7 @@ function AppInner(): React.JSX.Element {
     let unlisten: (() => void) | undefined;
     void listen('merge-block-close', () => {
       void message('合并任务正在进行中，请等待所有任务完成后再关闭应用。', {
-        title: 'MikanBox',
+        title: 'HoshimiNest',
         kind: 'warning',
       });
     }).then((fn) => {

@@ -49,14 +49,14 @@ function buildSearchQuery(terms: SearchTerm[]): string {
 function useSavedQueries(): [string[], (q: string) => void, (q: string) => void] {
   const [savedQueries, setSavedQueries] = useState<string[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('mikanbox-saved-queries') ?? '[]') as string[];
+      return JSON.parse(localStorage.getItem('hoshiminest-saved-queries') ?? '[]') as string[];
     } catch {
       return [];
     }
   });
 
   useEffect(() => {
-    localStorage.setItem('mikanbox-saved-queries', JSON.stringify(savedQueries));
+    localStorage.setItem('hoshiminest-saved-queries', JSON.stringify(savedQueries));
   }, [savedQueries]);
 
   function save(query: string): void {

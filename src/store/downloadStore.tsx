@@ -143,7 +143,7 @@ function inferPhase(params: {
 
 // ── Persistence ────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'mikanbox-download-tasks';
+const STORAGE_KEY = 'hoshiminest-download-tasks';
 
 function isValidTask(t: unknown): t is DownloadTask {
   if (t === null || t === undefined || typeof t !== 'object') {

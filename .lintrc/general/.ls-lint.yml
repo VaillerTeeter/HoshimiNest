@@ -1,5 +1,5 @@
 ---
-# ls-lint 配置 — 文件命名规范（针对 MikanBox 项目）
+# ls-lint 配置 — 文件命名规范（针对 HoshimiNest 项目）
 # 文档：https://ls-lint.org/2.x/configuration/the-rules.html
 # 用法：ls-lint --config .lintrc/general/.ls-lint.yml
 

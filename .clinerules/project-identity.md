@@ -1,16 +1,16 @@
 ---
-description: "MikanBox project overview — tech stack, directory structure, package manager, dev commands, Rust dependencies. Always apply."
+description: "HoshimiNest project overview — tech stack, directory structure, package manager, dev commands, Rust dependencies. Always apply."
 globs: ""
 alwaysApply: true
 ---
 
 # Project Identity
 
-<!-- MikanBox 项目身份与架构，AI 每次对话自动加载 -->
+<!-- HoshimiNest 项目身份与架构，AI 每次对话自动加载 -->
 
 ## Project Name & Purpose
 
-MikanBox is a desktop anime tracking & download manager.
+HoshimiNest is a desktop anime tracking & download manager.
 
 ## Tech Stack
 
@@ -111,4 +111,4 @@ yarn rustcheck    # cargo check (Rust compilation check only)
 ## Window Config
 
 - Window: 1360×820, non-resizable, non-maximizable, frameless (custom titlebar)
-- App identifier: `com.vaciller.mikanbox`
+- App identifier: `com.vaciller.hoshiminest`

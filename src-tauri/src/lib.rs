@@ -24,7 +24,7 @@ fn json_rpc(method: &str, params: serde_json::Value) -> serde_json::Value {
     let mut map = serde_json::Map::new();
     map.insert("jsonrpc".to_string(), serde_json::Value::String("2.0".to_string()));
     map.insert("method".to_string(), serde_json::Value::String(method.to_string()));
-    map.insert("id".to_string(), serde_json::Value::String("mikanbox".to_string()));
+    map.insert("id".to_string(), serde_json::Value::String("hoshiminest".to_string()));
     map.insert("params".to_string(), params);
     serde_json::Value::Object(map)
 }
@@ -97,7 +97,7 @@ fn aria2_add_uri_params(magnet: &str, options: &serde_json::Value) -> serde_json
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const ARIA2_PORT: u16 = 6800;
-const ARIA2_TOKEN: &str = "mikanbox-internal";
+const ARIA2_TOKEN: &str = "hoshiminest-internal";
 
 // ── State ─────────────────────────────────────────────────────────────────
 
@@ -1109,7 +1109,7 @@ fn reveal_in_folder(app: tauri::AppHandle, path: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[allow(clippy::disallowed_methods, clippy::disallowed_macros)]
 pub fn run() {
-    // Initialise env_logger so `RUST_LOG=mikanbox=debug yarn tauri dev` shows debug output.
+    // Initialise env_logger so `RUST_LOG=hoshiminest=debug yarn tauri dev` shows debug output.
     // No-op when RUST_LOG is unset; produces no output in normal use.
     let _ = env_logger::try_init();
     if let Err(e) = tauri::Builder::default()

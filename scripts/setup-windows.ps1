@@ -1,4 +1,4 @@
-﻿# MikanBox - Windows 开发环境检测与自动修复脚本
+﻿# HoshimiNest - Windows 开发环境检测与自动修复脚本
 # 运行方式（PowerShell，建议以管理员身份）：
 #   Set-ExecutionPolicy Bypass -Scope Process -Force
 #   .\scripts\setup-windows.ps1
@@ -272,7 +272,7 @@ else {
 Write-Section "检测结果汇总"
 if ($issues.Count -eq 0) {
     Out-ColorLine "`n  环境检测通过！下一步：" Green
-    Out-ColorLine "    cd MikanBox" White
+    Out-ColorLine "    cd HoshimiNest" White
     Out-ColorLine "    yarn install    # 安装前端依赖（首次）" White
     Out-ColorLine "    yarn tauri dev  # 启动 Tauri 开发窗口" White
 }

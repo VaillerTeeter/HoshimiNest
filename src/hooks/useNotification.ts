@@ -96,7 +96,7 @@ export function useNotification(tasksRef: React.MutableRefObject<DownloadTask[]>
 
       mergeUnlisten = await listen<MergeQueueDonePayload>('merge-queue-done', (event) => {
         const summary = mergeSummary(event.payload);
-        sendNotification({ title: 'MikanBox', body: summary });
+        sendNotification({ title: 'HoshimiNest', body: summary });
       });
     })();
 
