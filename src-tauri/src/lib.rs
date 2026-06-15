@@ -1198,7 +1198,7 @@ pub fn run() {
                     }
                     // Small delay so WebView2 can finish any pending I/O before
                     // the natural window-close triggers process exit.
-                    tokio::time::sleep(Duration::from_millis(150)).await;
+                    tokio::time::sleep(Duration::from_millis(300)).await;
                     // This re-triggers CloseRequested but the flag is now true,
                     // so we skip prevent_close and the window closes gracefully.
                     let _ = win.close();

@@ -852,6 +852,10 @@ body,
   scrollbar-width: thin;
 }
 
+.dl-main__toolbar {
+  margin-bottom: 14px;
+}
+
 .dl-empty {
   display: flex;
   align-items: center;
@@ -1049,6 +1053,145 @@ body,
   color: var(--theme-text-on-accent);
   background: var(--theme-text-error);
   border-color: var(--theme-text-error);
+}
+
+/* 添加磁力链接按钮 */
+.dl-add-magnet-btn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 7px 16px;
+  font-family: var(--theme-font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-text-on-accent);
+  cursor: pointer;
+  background: var(--theme-text-score);
+  border: 0;
+  border-radius: 8px;
+  transition: opacity 0.12s;
+}
+
+.dl-add-magnet-btn:hover {
+  opacity: 0.85;
+}
+
+/* Modal overlay */
+.dl-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.dl-modal-overlay::backdrop {
+  background: var(--theme-modal-overlay-bg);
+}
+
+/* Modal card */
+.dl-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 520px;
+  max-width: 90vw;
+  padding: 20px 24px;
+  background: var(--theme-card-bg);
+  border: 1.5px solid var(--theme-bar-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px var(--theme-card-shadow);
+}
+
+.dl-modal__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--theme-text-primary);
+}
+
+.dl-modal__input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  font-family: SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--theme-text-primary);
+  resize: vertical;
+  outline: 0;
+  background: var(--theme-content-bg);
+  border: 1.5px solid var(--theme-bar-border);
+  border-radius: 8px;
+  transition: border-color 0.12s;
+}
+
+.dl-modal__input:focus {
+  border-color: var(--theme-tag-border);
+}
+
+.dl-modal__input--error {
+  border-color: var(--theme-text-error);
+}
+
+.dl-modal__error {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--theme-text-error);
+}
+
+.dl-modal__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.dl-modal__btn {
+  padding: 6px 18px;
+  font-family: var(--theme-font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--theme-bar-border);
+  border-radius: 8px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.dl-modal__btn--cancel {
+  color: var(--theme-text-muted);
+  background: transparent;
+}
+
+.dl-modal__btn--cancel:hover {
+  color: var(--theme-text-primary);
+  background: var(--theme-tag-bg);
+}
+
+.dl-modal__btn--confirm {
+  color: var(--theme-text-on-accent);
+  background: var(--theme-text-score);
+  border-color: var(--theme-text-score);
+}
+
+.dl-modal__btn--confirm:hover {
+  opacity: 0.85;
+}
+
+.dl-modal__btn--confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 /* ══════════════════════════════════════════════════════════════

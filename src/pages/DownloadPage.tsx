@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
-import { useState } from 'react';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { useDownload, type TaskStatus, type DownloadTask } from '../store/downloadStore';
 
@@ -311,9 +312,140 @@ function TaskCard({
   );
 }
 
+// ── AddMagnetModal ──────────────────────────────────────────────────────────
+
+/**
+ * Auto-focus a ref element when `open` transitions from false → true.
+ *
+ * @param open - whether the modal is currently open
+ * @param ref - ref to the element to auto-focus
+ */
+function useAutoFocus(open: boolean, ref: React.RefObject<HTMLElement | null>): void {
+  const prevRef = useRef(false);
+  if (open && !prevRef.current) {
+    prevRef.current = true;
+    setTimeout(() => {
+      ref.current?.focus();
+    }, 0);
+  } else if (!open) {
+    prevRef.current = false;
+  }
+}
+
+interface AddMagnetModalProps {
+  open: boolean;
+  onClose: () => void;
+  addTask: (info: { name: string; magnet: string; saveDir: string }) => string;
+}
+
+function AddMagnetModal({ open, onClose, addTask }: AddMagnetModalProps): React.JSX.Element | null {
+  const [rawMagnet, setRawMagnet] = useState('');
+  const [error, setError] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useAutoFocus(open, textareaRef);
+
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  const handleClose = useCallback(() => {
+    setRawMagnet('');
+    setError('');
+    dialogRef.current?.close();
+    onClose();
+  }, [onClose]);
+
+  const handleConfirm = useCallback(async () => {
+    const trimmed = rawMagnet.trim();
+    if (trimmed.length === 0) {
+      return;
+    }
+    if (!trimmed.startsWith('magnet:')) {
+      setError('请输入有效的 magnet: 链接');
+      return;
+    }
+
+    const dir = await openDialog({ directory: true, multiple: false, title: '选择保存文件夹' });
+    if (dir === null) {
+      return;
+    }
+
+    // Use the magnet hash (truncated) as the task name
+    const hashMatch = /magnet:\?xt=urn:btih:([\da-f]+)/i.exec(trimmed);
+    const name = hashMatch?.[1] === undefined ? trimmed.slice(0, 48) : hashMatch[1].slice(0, 32);
+
+    const taskId = addTask({ name, magnet: trimmed, saveDir: dir });
+    if (taskId === '') {
+      setError('任务已存在（相同磁力链接与保存目录）');
+      return;
+    }
+
+    handleClose();
+  }, [rawMagnet, addTask, handleClose]);
+
+  // Show modal on mount (component only rendered when open); Escape-to-close is native to <dialog>
+  useEffect(() => {
+    dialogRef.current?.showModal();
+  }, []);
+
+  if (!open) {
+    return null;
+  }
+
+  const errorClass = error.length > 0 ? ' dl-modal__input--error' : '';
+
+  return (
+    <dialog ref={dialogRef} className="dl-modal-overlay" onClose={handleClose}>
+      <div className="dl-modal">
+        <h2 className="dl-modal__title">添加外部磁力链接</h2>
+        <textarea
+          ref={textareaRef}
+          className={`dl-modal__input${errorClass}`}
+          value={rawMagnet}
+          placeholder="在此粘贴 magnet: 链接…"
+          aria-label="磁力链接输入"
+          onChange={(e) => {
+            setRawMagnet(e.target.value);
+            if (error.length > 0) {
+              setError('');
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              void handleConfirm();
+            }
+          }}
+          rows={3}
+        />
+        {error.length > 0 && <div className="dl-modal__error">{error}</div>}
+        <div className="dl-modal__actions">
+          <button
+            type="button"
+            className="dl-modal__btn dl-modal__btn--cancel"
+            onClick={handleClose}
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            className="dl-modal__btn dl-modal__btn--confirm"
+            disabled={rawMagnet.trim().length === 0}
+            onClick={() => {
+              void handleConfirm();
+            }}
+          >
+            确认
+          </button>
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
 export default function DownloadPage(): React.JSX.Element {
-  const { tasks, pauseTask, resumeTask, cancelTask, restartTask, removeRecord } = useDownload();
+  const { tasks, addTask, pauseTask, resumeTask, cancelTask, restartTask, removeRecord } =
+    useDownload();
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
+  const [modalOpen, setModalOpen] = useState(false);
 
   const visibleTasks = filter === 'all' ? tasks : tasks.filter((t) => t.status === filter);
 
@@ -343,6 +475,18 @@ export default function DownloadPage(): React.JSX.Element {
         })}
       </aside>
       <main className="dl-main">
+        <div className="dl-main__toolbar">
+          <button
+            type="button"
+            className="dl-add-magnet-btn"
+            onClick={() => {
+              setModalOpen(true);
+            }}
+          >
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
+            添加磁力链接
+          </button>
+        </div>
         {visibleTasks.length === 0 ? (
           <div className="dl-empty">暂无任务</div>
         ) : (
@@ -361,6 +505,13 @@ export default function DownloadPage(): React.JSX.Element {
           </div>
         )}
       </main>
+      <AddMagnetModal
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+        }}
+        addTask={addTask}
+      />
     </div>
   );
 }
