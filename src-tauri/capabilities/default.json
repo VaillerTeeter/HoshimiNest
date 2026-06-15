@@ -10,6 +10,10 @@
     "core:window:allow-close",
     "opener:default",
     "dialog:allow-open",
-    "dialog:allow-message"
+    "dialog:allow-message",
+    "notification:default",
+    "notification:allow-notify",
+    "notification:allow-is-permission-granted",
+    "notification:allow-request-permission"
   ]
 }

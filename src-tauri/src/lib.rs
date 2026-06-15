@@ -512,6 +512,14 @@ struct MergeStatusEvt {
     error: Option<String>
 }
 
+/// Emitted after ALL jobs in a merge queue have finished (success or failure).
+#[derive(serde::Serialize, Clone)]
+struct MergeQueueDoneEvt {
+    total: usize,
+    done: usize,
+    error: usize,
+}
+
 // ── mkvmerge helpers ──────────────────────────────────────────────────────
 
 /// Mutable state shared across `push_file_track_args` calls within a single
@@ -824,8 +832,11 @@ async fn start_merge_queue(app: tauri::AppHandle, jobs: Vec<MergeJobReq>) -> Res
     for (i, j) in jobs.iter().enumerate() {
         debug!("[queue]   #{} id={} → {:?}", i + 1, j.id, j.output_name);
     }
+    let total = jobs.len();
     app.state::<MergeRunning>().0.store(true, Ordering::SeqCst);
     tauri::async_runtime::spawn(async move {
+        let mut done: usize = 0;
+        let mut error: usize = 0;
         for job in jobs {
             info!("[queue] 开始任务 id={}", job.id);
             let _ = app.emit("merge-status", MergeStatusEvt {
@@ -835,6 +846,7 @@ async fn start_merge_queue(app: tauri::AppHandle, jobs: Vec<MergeJobReq>) -> Res
             });
             match run_mkvmerge_job(&app, &job).await {
                 Ok(()) => {
+                    done += 1;
                     info!("[queue] 任务完成 id={}", job.id);
                     let _ = app.emit("merge-status", MergeStatusEvt {
                         job_id: job.id.clone(),
@@ -843,6 +855,7 @@ async fn start_merge_queue(app: tauri::AppHandle, jobs: Vec<MergeJobReq>) -> Res
                     });
                 },
                 Err(e) => {
+                    error += 1;
                     error!("[queue] 任务失败 id={} err={}", job.id, e);
                     let _ = app.emit("merge-status", MergeStatusEvt {
                         job_id: job.id.clone(),
@@ -852,7 +865,8 @@ async fn start_merge_queue(app: tauri::AppHandle, jobs: Vec<MergeJobReq>) -> Res
                 }
             }
         }
-        info!("[queue] 所有任务处理完毕");
+        info!("[queue] 所有任务处理完毕 (成功: {done}, 失败: {error})");
+        let _ = app.emit("merge-queue-done", MergeQueueDoneEvt { total, done, error });
         app.state::<MergeRunning>().0.store(false, Ordering::SeqCst);
     });
     Ok(())
@@ -1103,6 +1117,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // Load compile-time config (embedded from app-config.json)
             let cfg = load_app_config()?;

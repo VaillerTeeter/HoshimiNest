@@ -15,6 +15,8 @@ import {
   type SetStateAction,
 } from 'react';
 
+import { useNotification } from '../hooks/useNotification';
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type TaskStatus = '下载中' | '已完成' | '暂停' | '错误' | '中断' | '已取消';
@@ -474,6 +476,7 @@ export function DownloadProvider({ children }: { children: ReactNode }): ReactEl
   const actions = useDownloadActions(tasksRef, setTasks);
   const { markTaskError } = actions;
   useProgressListener(markTaskError, setTasks);
+  useNotification(tasksRef);
 
   const contextValue = useMemo(() => ({ tasks, ...actions }), [tasks, actions]);
 
