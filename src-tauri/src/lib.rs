@@ -1012,14 +1012,71 @@ async fn cancel_task(app: tauri::AppHandle, task_id: String) -> Result<(), Strin
         let _ = tx.send(());
     }
 
-    // Tell aria2 to remove
+    // Collect file paths before removing from aria2, then remove the task
     let gid_map = app.state::<GidMap>();
     let gid = gid_map.0.lock().unwrap_or_else(|e| e.into_inner()).remove(&task_id);
     if let Some(gid) = gid {
         debug!("[cancel_task] gid={gid}");
         let client = reqwest::Client::new();
-        // Use forceRemove so it works even when paused
+
+        // Query file list from aria2 before removing (may fail if metadata
+        // hasn't resolved yet — that's fine, no files to clean up).
+        let mut file_paths: Vec<String> = Vec::new();
+        let get_files_params = serde_json::Value::Array(vec![
+            token_param(),
+            serde_json::Value::String(gid.clone()),
+        ]);
+        match aria2_call(&client, "aria2.getFiles", get_files_params).await {
+            Ok(files) => {
+                if let Some(arr) = files.as_array() {
+                    for f in arr {
+                        if let Some(path) = f["path"].as_str() {
+                            file_paths.push(path.to_string());
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                debug!("[cancel_task] getFiles failed (expected for unresolved metadata): {e}");
+            }
+        }
+
+        // Remove the download from aria2 (forceRemove so it works even when paused)
         let _ = aria2_call(&client, "aria2.forceRemove", aria2_simple_params(&gid)).await;
+        // Clean up the stopped/result list entry
+        let _ =
+            aria2_call(&client, "aria2.removeDownloadResult", aria2_simple_params(&gid)).await;
+
+        // Delete downloaded files from disk
+        for path in &file_paths {
+            match std::fs::remove_file(path) {
+                Ok(()) => {
+                    info!("[cancel_task] 已删除: {path}");
+                }
+                Err(e) => {
+                    warn!("[cancel_task] 删除文件失败: {path} ({e})");
+                }
+            }
+        }
+        // Delete .aria2 control files
+        for path in &file_paths {
+            let control_file = format!("{path}.aria2");
+            match std::fs::remove_file(&control_file) {
+                Ok(()) => {
+                    info!("[cancel_task] 已删除控制文件: {control_file}");
+                }
+                Err(e) => {
+                    warn!("[cancel_task] 删除控制文件失败: {control_file} ({e})");
+                }
+            }
+        }
+        if !file_paths.is_empty() {
+            info!(
+                "[cancel_task] 共清理 {} 个数据文件 + {} 个控制文件 (task={task_id})",
+                file_paths.len(),
+                file_paths.len()
+            );
+        }
     }
     Ok(())
 }
