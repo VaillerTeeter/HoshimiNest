@@ -1,9 +1,10 @@
+import { listen } from '@tauri-apps/api/event';
+
 import {
   isPermissionGranted,
   requestPermission,
   sendNotification,
 } from '@tauri-apps/plugin-notification';
-import { listen } from '@tauri-apps/api/event';
 import { useEffect, useRef } from 'react';
 
 import type { DownloadTask } from '../store/downloadStore';
@@ -26,7 +27,13 @@ interface MergeQueueDonePayload {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-/** Resolve a task name from the tasks ref; falls back to the task ID. */
+/**
+ * Resolve a task name from the tasks ref; falls back to the task ID.
+ *
+ * @param taskId - The download task ID to look up
+ * @param tasksRef - Mutable ref to the current download task list
+ * @returns The human-readable task name, or the task ID if not found
+ */
 function resolveTaskName(taskId: string, tasksRef: React.MutableRefObject<DownloadTask[]>): string {
   const task = tasksRef.current.find((t) => t.id === taskId);
   return task?.name ?? taskId;
@@ -35,12 +42,12 @@ function resolveTaskName(taskId: string, tasksRef: React.MutableRefObject<Downlo
 function mergeSummary(payload: MergeQueueDonePayload): string {
   const { total, done, error } = payload;
   if (error === 0) {
-    return total === 1 ? '合并完成' : `${total} 个文件全部合并完成`;
+    return total === 1 ? '合并完成' : `${String(total)} 个文件全部合并完成`;
   }
   if (done === 0) {
-    return total === 1 ? '合并失败' : `${total} 个文件全部合并失败`;
+    return total === 1 ? '合并失败' : `${String(total)} 个文件全部合并失败`;
   }
-  return `${done} 个完成，${error} 个失败`;
+  return `${String(done)} 个完成，${String(error)} 个失败`;
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────
@@ -66,7 +73,7 @@ export function useNotification(tasksRef: React.MutableRefObject<DownloadTask[]>
     let downloadUnlisten: (() => void) | undefined;
     let mergeUnlisten: (() => void) | undefined;
 
-    void (async () => {
+    (async () => {
       // Request permission on first load
       let granted = await isPermissionGranted();
       if (!granted) {
@@ -81,16 +88,16 @@ export function useNotification(tasksRef: React.MutableRefObject<DownloadTask[]>
         const { id, aria2_status: status } = event.payload;
         if (status === 'complete') {
           const name = resolveTaskName(id, tasksRef);
-          void sendNotification({ title: '下载完成', body: `《${name}》已下载完毕` });
+          sendNotification({ title: '下载完成', body: `《${name}》已下载完毕` });
         } else if (status === 'error') {
           const name = resolveTaskName(id, tasksRef);
-          void sendNotification({ title: '下载出错', body: `《${name}》下载失败` });
+          sendNotification({ title: '下载出错', body: `《${name}》下载失败` });
         }
       });
 
       mergeUnlisten = await listen<MergeQueueDonePayload>('merge-queue-done', (event) => {
         const summary = mergeSummary(event.payload);
-        void sendNotification({ title: 'MikanBox', body: summary });
+        sendNotification({ title: 'MikanBox', body: summary });
       });
     })();
 

@@ -517,7 +517,7 @@ struct MergeStatusEvt {
 struct MergeQueueDoneEvt {
     total: usize,
     done: usize,
-    error: usize,
+    error: usize
 }
 
 // ── mkvmerge helpers ──────────────────────────────────────────────────────
@@ -866,7 +866,11 @@ async fn start_merge_queue(app: tauri::AppHandle, jobs: Vec<MergeJobReq>) -> Res
             }
         }
         info!("[queue] 所有任务处理完毕 (成功: {done}, 失败: {error})");
-        let _ = app.emit("merge-queue-done", MergeQueueDoneEvt { total, done, error });
+        let _ = app.emit("merge-queue-done", MergeQueueDoneEvt {
+            total,
+            done,
+            error
+        });
         app.state::<MergeRunning>().0.store(false, Ordering::SeqCst);
     });
     Ok(())
