@@ -1,5 +1,4 @@
 import { listen } from '@tauri-apps/api/event';
-
 import {
   isPermissionGranted,
   requestPermission,
@@ -73,7 +72,7 @@ export function useNotification(tasksRef: React.MutableRefObject<DownloadTask[]>
     let downloadUnlisten: (() => void) | undefined;
     let mergeUnlisten: (() => void) | undefined;
 
-    (async () => {
+    void (async () => {
       // Request permission on first load
       let granted = await isPermissionGranted();
       if (!granted) {
