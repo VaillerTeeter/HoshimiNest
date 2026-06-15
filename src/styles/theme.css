@@ -43,6 +43,9 @@
   /* ── Shadow ───────────────────────────────────── */
   --theme-card-shadow:      rgb(0 0 0 / 12%);
 
+  /* ── Modal ──────────────────────────────────────── */
+  --theme-modal-overlay-bg: rgb(0 0 0 / 30%);
+
   /* ── Table ──────────────────────────────────────── */
   --theme-table-header-bg:  #f7f3df;    /* animal-island-ui 表头底色 */
   --theme-seeders-color:    #2a8a2a;    /* 做种数绿色 */

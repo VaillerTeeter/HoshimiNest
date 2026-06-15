@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
-import { useState } from 'react';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
+
+import { useState, useCallback, useRef } from 'react';
 
 import { useDownload, type TaskStatus, type DownloadTask } from '../store/downloadStore';
 
@@ -311,9 +313,136 @@ function TaskCard({
   );
 }
 
+// ── AddMagnetModal ──────────────────────────────────────────────────────────
+
+interface AddMagnetModalProps {
+  open: boolean;
+  onClose: () => void;
+  addTask: (info: { name: string; magnet: string; saveDir: string }) => string;
+}
+
+function AddMagnetModal({ open, onClose, addTask }: AddMagnetModalProps): React.JSX.Element | null {
+  const [rawMagnet, setRawMagnet] = useState('');
+  const [error, setError] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleClose = useCallback(() => {
+    setRawMagnet('');
+    setError('');
+    onClose();
+  }, [onClose]);
+
+  const handleConfirm = useCallback(async () => {
+    const trimmed = rawMagnet.trim();
+    if (trimmed === '') {
+      return;
+    }
+    if (!trimmed.startsWith('magnet:')) {
+      setError('请输入有效的 magnet: 链接');
+      return;
+    }
+
+    const dir = await openDialog({ directory: true, multiple: false, title: '选择保存文件夹' });
+    if (dir === null) {
+      return;
+    }
+
+    // Use the magnet hash (truncated) as the task name
+    const hashMatch = /magnet:\?xt=urn:btih:([a-fA-F0-9]+)/i.exec(trimmed);
+    const name = hashMatch?.[1] != null ? hashMatch[1].slice(0, 32) : trimmed.slice(0, 48);
+
+    const taskId = addTask({ name, magnet: trimmed, saveDir: dir });
+    if (taskId === '') {
+      setError('任务已存在（相同磁力链接与保存目录）');
+      return;
+    }
+
+    handleClose();
+  }, [rawMagnet, addTask, handleClose]);
+
+  // Auto-focus textarea when modal opens
+  const prevOpenRef = useRef(false);
+  if (open && !prevOpenRef.current) {
+    prevOpenRef.current = true;
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 0);
+  } else if (!open) {
+    prevOpenRef.current = false;
+  }
+
+  if (!open) {
+    return null;
+  }
+
+  const canConfirm = rawMagnet.trim() !== '';
+
+  return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    <div
+      className="dl-modal-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          handleClose();
+        }
+      }}
+    >
+      <div className="dl-modal">
+        <h2 className="dl-modal__title">添加外部磁力链接</h2>
+        <textarea
+          ref={textareaRef}
+          className={`dl-modal__input${error !== '' ? ' dl-modal__input--error' : ''}`}
+          value={rawMagnet}
+          placeholder="在此粘贴 magnet: 链接…"
+          onChange={(e) => {
+            setRawMagnet(e.target.value);
+            if (error !== '') {
+              setError('');
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              void handleConfirm();
+            }
+          }}
+          rows={3}
+        />
+        {error !== '' && <div className="dl-modal__error">{error}</div>}
+        <div className="dl-modal__actions">
+          <button
+            type="button"
+            className="dl-modal__btn dl-modal__btn--cancel"
+            onClick={handleClose}
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            className="dl-modal__btn dl-modal__btn--confirm"
+            disabled={!canConfirm}
+            onClick={() => {
+              void handleConfirm();
+            }}
+          >
+            确认
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DownloadPage(): React.JSX.Element {
-  const { tasks, pauseTask, resumeTask, cancelTask, restartTask, removeRecord } = useDownload();
+  const { tasks, addTask, pauseTask, resumeTask, cancelTask, restartTask, removeRecord } =
+    useDownload();
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
+  const [modalOpen, setModalOpen] = useState(false);
 
   const visibleTasks = filter === 'all' ? tasks : tasks.filter((t) => t.status === filter);
 
@@ -343,6 +472,18 @@ export default function DownloadPage(): React.JSX.Element {
         })}
       </aside>
       <main className="dl-main">
+        <div className="dl-main__toolbar">
+          <button
+            type="button"
+            className="dl-add-magnet-btn"
+            onClick={() => {
+              setModalOpen(true);
+            }}
+          >
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
+            添加磁力链接
+          </button>
+        </div>
         {visibleTasks.length === 0 ? (
           <div className="dl-empty">暂无任务</div>
         ) : (
@@ -361,6 +502,13 @@ export default function DownloadPage(): React.JSX.Element {
           </div>
         )}
       </main>
+      <AddMagnetModal
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+        }}
+        addTask={addTask}
+      />
     </div>
   );
 }
