@@ -269,7 +269,7 @@ function QueuePanel({
           type="button"
           className="tw-btn tw-btn--secondary tw-btn--sm"
           onClick={onClearQueue}
-          disabled={pendingCount === 0}
+          disabled={jobs.every((j) => j.status === 'running')}
         >
           清空
         </button>

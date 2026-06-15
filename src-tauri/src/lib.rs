@@ -113,6 +113,9 @@ struct Aria2Child(Mutex<Option<CommandChild>>);
 /// Flag to break the CloseRequested re-entry loop
 struct Closing(AtomicBool);
 
+/// Whether any mkvmerge job is currently running in the merge queue
+struct MergeRunning(AtomicBool);
+
 // ── Compile-time configuration (编译时配置) ─────────────────────────────────
 //
 // 修改 src-tauri/app-config.json 后重新编译即可生效。
@@ -821,6 +824,7 @@ async fn start_merge_queue(app: tauri::AppHandle, jobs: Vec<MergeJobReq>) -> Res
     for (i, j) in jobs.iter().enumerate() {
         debug!("[queue]   #{} id={} → {:?}", i + 1, j.id, j.output_name);
     }
+    app.state::<MergeRunning>().0.store(true, Ordering::SeqCst);
     tauri::async_runtime::spawn(async move {
         for job in jobs {
             info!("[queue] 开始任务 id={}", job.id);
@@ -849,6 +853,7 @@ async fn start_merge_queue(app: tauri::AppHandle, jobs: Vec<MergeJobReq>) -> Res
             }
         }
         info!("[queue] 所有任务处理完毕");
+        app.state::<MergeRunning>().0.store(false, Ordering::SeqCst);
     });
     Ok(())
 }
@@ -1007,14 +1012,70 @@ async fn cancel_task(app: tauri::AppHandle, task_id: String) -> Result<(), Strin
         let _ = tx.send(());
     }
 
-    // Tell aria2 to remove
+    // Collect file paths before removing from aria2, then remove the task
     let gid_map = app.state::<GidMap>();
     let gid = gid_map.0.lock().unwrap_or_else(|e| e.into_inner()).remove(&task_id);
     if let Some(gid) = gid {
         debug!("[cancel_task] gid={gid}");
         let client = reqwest::Client::new();
-        // Use forceRemove so it works even when paused
+
+        // Query file list from aria2 before removing (may fail if metadata
+        // hasn't resolved yet — that's fine, no files to clean up).
+        let mut file_paths: Vec<String> = Vec::new();
+        let get_files_params =
+            serde_json::Value::Array(vec![token_param(), serde_json::Value::String(gid.clone())]);
+        match aria2_call(&client, "aria2.getFiles", get_files_params).await {
+            Ok(files) => {
+                if let Some(arr) = files.as_array() {
+                    file_paths.extend(
+                        arr.iter().filter_map(|f| f["path"].as_str().map(|s| s.to_string()))
+                    );
+                }
+            },
+            Err(e) => {
+                debug!("[cancel_task] getFiles failed (expected for unresolved metadata): {e}");
+            }
+        }
+
+        // Remove the download from aria2 (forceRemove so it works even when paused)
         let _ = aria2_call(&client, "aria2.forceRemove", aria2_simple_params(&gid)).await;
+        // Clean up the stopped/result list entry
+        let _ = aria2_call(&client, "aria2.removeDownloadResult", aria2_simple_params(&gid)).await;
+
+        // Delete downloaded files from disk
+        for path in &file_paths {
+            // paths come from aria2 RPC response, not user input
+            // nosemgrep
+            match std::fs::remove_file(path) {
+                Ok(()) => {
+                    info!("[cancel_task] 已删除: {path}");
+                },
+                Err(e) => {
+                    warn!("[cancel_task] 删除文件失败: {path} ({e})");
+                }
+            }
+        }
+        // Delete .aria2 control files
+        for path in &file_paths {
+            let control_file = format!("{path}.aria2");
+            // paths derived from aria2 RPC response, not user input
+            // nosemgrep
+            match std::fs::remove_file(&control_file) {
+                Ok(()) => {
+                    info!("[cancel_task] 已删除控制文件: {control_file}");
+                },
+                Err(e) => {
+                    warn!("[cancel_task] 删除控制文件失败: {control_file} ({e})");
+                }
+            }
+        }
+        if !file_paths.is_empty() {
+            info!(
+                "[cancel_task] 共清理 {} 个数据文件 + {} 个控制文件 (task={task_id})",
+                file_paths.len(),
+                file_paths.len()
+            );
+        }
     }
     Ok(())
 }
@@ -1022,7 +1083,7 @@ async fn cancel_task(app: tauri::AppHandle, task_id: String) -> Result<(), Strin
 #[tauri::command]
 fn reveal_in_folder(app: tauri::AppHandle, path: String) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
-    app.opener().reveal_item_in_dir(std::path::Path::new(&path)).map_err(|e| e.to_string())
+    app.opener().open_path(&path, None::<&str>).map_err(|e| e.to_string())
 }
 
 // ── App entry ─────────────────────────────────────────────────────────────
@@ -1038,6 +1099,7 @@ pub fn run() {
         .manage(PollStops(Mutex::new(HashMap::new())))
         .manage(Aria2Child(Mutex::new(None)))
         .manage(Closing(AtomicBool::new(false)))
+        .manage(MergeRunning(AtomicBool::new(false)))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -1104,6 +1166,13 @@ pub fn run() {
                 ..
             } = event
             {
+                // Block close while any mkvmerge job is running in the merge queue.
+                // The frontend listens for "merge-block-close" and shows a dialog.
+                if window.app_handle().state::<MergeRunning>().0.load(Ordering::SeqCst) {
+                    api.prevent_close();
+                    let _ = window.emit("merge-block-close", ());
+                    return;
+                }
                 // Use an AtomicBool to break the re-entry loop:
                 // first call → prevent close, clean up aria2, then win.close().
                 // second call (triggered by win.close()) → flag is set, let it
