@@ -1,4 +1,6 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { listen } from '@tauri-apps/api/event';
+import { message } from '@tauri-apps/plugin-dialog';
 import { Button, Icon, Loading, type IconName } from 'animal-island-ui';
 import { useState, useRef, useEffect, useCallback, type MutableRefObject } from 'react';
 
@@ -211,6 +213,24 @@ function AppInner(): React.JSX.Element {
     count: number;
   } | null>(null);
   const queryCancelRef = useRef<(() => void) | null>(null);
+
+  // Listen for merge-block-close event from the backend: show a modal dialog
+  // to inform the user that merge tasks are still running.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void listen('merge-block-close', () => {
+      void message('合并任务正在进行中，请等待所有任务完成后再关闭应用。', {
+        title: 'MikanBox',
+        kind: 'warning',
+      });
+    }).then((fn) => {
+      unlisten = fn;
+      return fn;
+    });
+    return () => {
+      unlisten?.();
+    };
+  }, []);
 
   function handleQueryCancel(): void {
     queryCancelRef.current?.();

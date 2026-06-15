@@ -113,6 +113,9 @@ struct Aria2Child(Mutex<Option<CommandChild>>);
 /// Flag to break the CloseRequested re-entry loop
 struct Closing(AtomicBool);
 
+/// Whether any mkvmerge job is currently running in the merge queue
+struct MergeRunning(AtomicBool);
+
 // ── Compile-time configuration (编译时配置) ─────────────────────────────────
 //
 // 修改 src-tauri/app-config.json 后重新编译即可生效。
@@ -821,6 +824,7 @@ async fn start_merge_queue(app: tauri::AppHandle, jobs: Vec<MergeJobReq>) -> Res
     for (i, j) in jobs.iter().enumerate() {
         debug!("[queue]   #{} id={} → {:?}", i + 1, j.id, j.output_name);
     }
+    app.state::<MergeRunning>().0.store(true, Ordering::SeqCst);
     tauri::async_runtime::spawn(async move {
         for job in jobs {
             info!("[queue] 开始任务 id={}", job.id);
@@ -849,6 +853,7 @@ async fn start_merge_queue(app: tauri::AppHandle, jobs: Vec<MergeJobReq>) -> Res
             }
         }
         info!("[queue] 所有任务处理完毕");
+        app.state::<MergeRunning>().0.store(false, Ordering::SeqCst);
     });
     Ok(())
 }
@@ -1038,6 +1043,7 @@ pub fn run() {
         .manage(PollStops(Mutex::new(HashMap::new())))
         .manage(Aria2Child(Mutex::new(None)))
         .manage(Closing(AtomicBool::new(false)))
+        .manage(MergeRunning(AtomicBool::new(false)))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -1104,6 +1110,13 @@ pub fn run() {
                 ..
             } = event
             {
+                // Block close while any mkvmerge job is running in the merge queue.
+                // The frontend listens for "merge-block-close" and shows a dialog.
+                if window.app_handle().state::<MergeRunning>().0.load(Ordering::SeqCst) {
+                    api.prevent_close();
+                    let _ = window.emit("merge-block-close", ());
+                    return;
+                }
                 // Use an AtomicBool to break the re-entry loop:
                 // first call → prevent close, clean up aria2, then win.close().
                 // second call (triggered by win.close()) → flag is set, let it
