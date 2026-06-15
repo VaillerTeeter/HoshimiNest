@@ -1,5 +1,5 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { message } from '@tauri-apps/plugin-dialog';
 import { Button, Icon, Loading, type IconName } from 'animal-island-ui';
 import { useState, useRef, useEffect, useCallback, type MutableRefObject } from 'react';

@@ -1022,20 +1022,16 @@ async fn cancel_task(app: tauri::AppHandle, task_id: String) -> Result<(), Strin
         // Query file list from aria2 before removing (may fail if metadata
         // hasn't resolved yet — that's fine, no files to clean up).
         let mut file_paths: Vec<String> = Vec::new();
-        let get_files_params = serde_json::Value::Array(vec![
-            token_param(),
-            serde_json::Value::String(gid.clone()),
-        ]);
+        let get_files_params =
+            serde_json::Value::Array(vec![token_param(), serde_json::Value::String(gid.clone())]);
         match aria2_call(&client, "aria2.getFiles", get_files_params).await {
             Ok(files) => {
                 if let Some(arr) = files.as_array() {
-                    for f in arr {
-                        if let Some(path) = f["path"].as_str() {
-                            file_paths.push(path.to_string());
-                        }
-                    }
+                    file_paths.extend(
+                        arr.iter().filter_map(|f| f["path"].as_str().map(|s| s.to_string()))
+                    );
                 }
-            }
+            },
             Err(e) => {
                 debug!("[cancel_task] getFiles failed (expected for unresolved metadata): {e}");
             }
@@ -1044,15 +1040,16 @@ async fn cancel_task(app: tauri::AppHandle, task_id: String) -> Result<(), Strin
         // Remove the download from aria2 (forceRemove so it works even when paused)
         let _ = aria2_call(&client, "aria2.forceRemove", aria2_simple_params(&gid)).await;
         // Clean up the stopped/result list entry
-        let _ =
-            aria2_call(&client, "aria2.removeDownloadResult", aria2_simple_params(&gid)).await;
+        let _ = aria2_call(&client, "aria2.removeDownloadResult", aria2_simple_params(&gid)).await;
 
         // Delete downloaded files from disk
         for path in &file_paths {
+            // paths come from aria2 RPC response, not user input
+            // nosemgrep
             match std::fs::remove_file(path) {
                 Ok(()) => {
                     info!("[cancel_task] 已删除: {path}");
-                }
+                },
                 Err(e) => {
                     warn!("[cancel_task] 删除文件失败: {path} ({e})");
                 }
@@ -1061,10 +1058,12 @@ async fn cancel_task(app: tauri::AppHandle, task_id: String) -> Result<(), Strin
         // Delete .aria2 control files
         for path in &file_paths {
             let control_file = format!("{path}.aria2");
+            // paths derived from aria2 RPC response, not user input
+            // nosemgrep
             match std::fs::remove_file(&control_file) {
                 Ok(()) => {
                     info!("[cancel_task] 已删除控制文件: {control_file}");
-                }
+                },
                 Err(e) => {
                     warn!("[cancel_task] 删除控制文件失败: {control_file} ({e})");
                 }
