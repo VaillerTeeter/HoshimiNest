@@ -260,10 +260,10 @@
   dependencies:
     "@rolldown/pluginutils" "^1.0.0"
 
-animal-island-ui@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/animal-island-ui/-/animal-island-ui-1.0.1.tgz#18afd4bf0e8391e3d19fde30eb8a8ba5c8deaa17"
-  integrity sha512-yzIlqlUcUutAMrMSZ6hYcegOvIu884q43XRGTWrm1aX7Q6DDdfVdhTwV3Ex4gVIh40UXnHmcpdpYmQ9VL8vJCA==
+animal-island-ui@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/animal-island-ui/-/animal-island-ui-1.0.2.tgz#e3ca8a538d4b5d90920d89ba3eb42f3afaf9addd"
+  integrity sha512-ofuWKa5r7WDCTaaygYRfcc25BifTTK4H2tfO7niBdqxDNrEASG3eZWMljdhnqBs6Hbm58kOxI7ALmqD/StzW/g==
   dependencies:
     "@fontsource/noto-sans-sc" "^5.2.9"
     "@fontsource/nunito" "^5.2.7"
