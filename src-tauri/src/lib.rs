@@ -1027,7 +1027,7 @@ async fn cancel_task(app: tauri::AppHandle, task_id: String) -> Result<(), Strin
 #[tauri::command]
 fn reveal_in_folder(app: tauri::AppHandle, path: String) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
-    app.opener().reveal_item_in_dir(std::path::Path::new(&path)).map_err(|e| e.to_string())
+    app.opener().open_path(&path, None::<&str>).map_err(|e| e.to_string())
 }
 
 // ── App entry ─────────────────────────────────────────────────────────────
