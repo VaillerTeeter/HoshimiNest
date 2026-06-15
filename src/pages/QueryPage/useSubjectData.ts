@@ -6,7 +6,7 @@ import {
 } from 'bangumi-api-client';
 import { useEffect, useState } from 'react';
 
-const bgm = createBangumiClient({ userAgent: 'MikanBox/0.1.0' });
+const bgm = createBangumiClient({ userAgent: 'HoshimiNest/0.1.0' });
 
 interface EpisodesResult {
   episodes: Episode[];

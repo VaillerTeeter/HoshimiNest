@@ -11,7 +11,7 @@ import {
 import { DetailModal } from './finished/DetailModal';
 import { FinishedCard } from './finished/FinishedCard';
 
-const bgm = createBangumiClient({ userAgent: 'MikanBox/0.1.0' });
+const bgm = createBangumiClient({ userAgent: 'HoshimiNest/0.1.0' });
 
 interface Props {
   isActive?: boolean;

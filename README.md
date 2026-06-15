@@ -1,4 +1,4 @@
-# MikanBox
+# HoshimiNest
 
 基于 [Bangumi API](https://github.com/bangumi/api) 的 Windows 桌面番剧管理工具，使用 Tauri v2 + React + TypeScript + Rust 构建。
 
@@ -9,15 +9,13 @@
 - **资源搜索** — 搜索 Nyaa 字幕组资源，支持多关键词 AND / OR / NOT 逻辑组合，一键添加磁力下载
 - **番剧下载** — 内嵌 aria2c sidecar，磁力链接下载，任务全生命周期管理（下载中 / 暂停 / 恢复 / 取消 / 重启），状态机防止非法转换；显示阶段、连接数、做种数诊断信息；下载设置弹窗支持 BT Tracker 列表管理、高级参数配置（最大 Peer 数 / 磁盘缓存 / 监听端口），配置全部持久化到磁盘，支持 JSON 导入 / 导出，脏标记提示未保存修改
 - **轨道合并** — MKV 轨道工坊，识别视频 / 音频 / 字幕轨道，支持双文件队列合并（A 版视频 + B 版字幕），实时进度推送，自动清空轨道名称，输出目录默认为 A 版文件所在目录；内嵌 mkvmerge sidecar
+- **桌面通知** — 下载完成 / 下载错误 / 合并队列完成时推送 Windows 系统通知
+- **外部磁力链接下载** — 支持直接输入外部磁力链接添加下载任务，不限于 Nyaa 搜索结果
 
 ## 规划中
 
 - **RSS 自动订阅** — 订阅蜜柑计划 / Nyaa RSS 源，按番剧 + 字幕组规则自动匹配新集并推送到下载队列，无需手动搜索
 - **文件自动重命名** — 下载完成后按 `[字幕组] 番剧名 - 集数 [分辨率].mkv` 规范自动重命名，支持自定义模板
-- **Bangumi 进度同步** — 在追番页一键将本地观看进度（已看集数）写回 Bangumi，保持在线收藏数据一致
-- **本地视频库** — 扫描指定目录，将本地 MKV / MP4 文件与 Bangumi 番剧条目自动关联，支持调用外部播放器
-- **桌面通知** — 下载完成、新集到达、合并结束时推送 Windows 系统通知
-- **外部磁力链接下载** — 支持直接输入外部磁力链接进行下载，不限于 Nyaa 搜索结果
 - **完善测试文档** — 补充端到端测试用例与自动化测试流程，提升项目可维护性
 
 ## 目录结构
@@ -107,6 +105,8 @@
 │   ├── assets/
 │   │   └── fonts/
 │   │       └── ZCOOLKuaiLe-Regular.ttf        # 站酷快乐体（内置，无需网络）
+│   ├── hooks/                                 # 自定义 React Hooks
+│   │   └── useNotification.ts                 # 桌面通知 hook
 │   ├── main.tsx                               # React 入口
 │   ├── pages/                                 # 页面组件（每项导航对应一个页面）
 │   │   ├── BacklogPage.tsx                    # 补番计划
@@ -238,7 +238,7 @@ yarn tauri build
 
 ### 本项目
 
-- [MikanBox](https://github.com/VaillerTeeter/MikanBox) — 本仓库
+- [HoshimiNest](https://github.com/VaillerTeeter/HoshimiNest) — 本仓库
 
 ### Bangumi
 

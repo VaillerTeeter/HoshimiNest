@@ -1,4 +1,4 @@
-# MikanBox UI 手动测试手顺
+# HoshimiNest UI 手动测试手顺
 
 > 本文档面向测试人员，按页面逐项描述手动操作步骤与预期结果。
 >
@@ -9,13 +9,13 @@
 为确保测试从干净状态开始，测试前需删除应用持久化数据（追番收藏、下载记录等 localStorage 数据）。Tauri 应用的 WebView2 数据存储在：
 
 ```text
-%LOCALAPPDATA%\com.vaciller.mikanbox
+%LOCALAPPDATA%\com.vaciller.hoshiminest
 ```
 
 操作步骤：
 
-1. 关闭 MikanBox 应用
-2. 按 `Win + R` → 输入 `%LOCALAPPDATA%\com.vaciller.mikanbox` → 回车
+1. 关闭 HoshimiNest 应用
+2. 按 `Win + R` → 输入 `%LOCALAPPDATA%\com.vaciller.hoshiminest` → 回车
 3. 删除该目录下所有文件和子目录
 4. 重新执行 `yarn tauri dev` 启动应用，终端输出如下：
 
@@ -32,7 +32,7 @@ $ vite
      Running DevCommand (`cargo  run --no-default-features --color always --`)
         Info Watching <project-root>\src-tauri for changes...
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.56s
-     Running `target\debug\mikanbox.exe`
+     Running `target\debug\hoshiminest.exe`
 ```
 
 > 删除后应用将恢复为初始安装状态，所有追番收藏和下载任务记录将被清空。
@@ -206,7 +206,7 @@ $ vite
 
 1. 顶部标题栏显示当前搜索的年份、季度及番剧总数
 
-> **预期结果**：标题格式为 `MikanBox - 季度查询 - 20XXQX番剧共N部`
+> **预期结果**：标题格式为 `HoshimiNest - 季度查询 - 20XXQX番剧共N部`
 
 2. 页面下部为左右双栏布局：左侧为番剧摘要列表，右侧为番剧详情（初始为空白）
 

@@ -1,5 +1,5 @@
 ---
-# yamllint 配置 — 针对 MikanBox 项目
+# yamllint 配置 — 针对 HoshimiNest 项目
 # 文档：https://yamllint.readthedocs.io/en/stable/configuration.html
 
 extends: default

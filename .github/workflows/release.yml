@@ -120,7 +120,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          name: MikanBox v${{ steps.version.outputs.version }}
+          name: HoshimiNest v${{ steps.version.outputs.version }}
           files: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/nsis/*.exe

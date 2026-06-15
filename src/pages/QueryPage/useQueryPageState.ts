@@ -33,7 +33,7 @@ function seasonLabel(s: SeasonKey): string {
   }
 }
 
-const bgm = createBangumiClient({ userAgent: 'MikanBox/0.1.0' });
+const bgm = createBangumiClient({ userAgent: 'HoshimiNest/0.1.0' });
 
 // ── fetchMonth ───────────────────────────────────────────────────────────────
 

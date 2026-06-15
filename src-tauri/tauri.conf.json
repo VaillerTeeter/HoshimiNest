@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mikanbox",
+  "productName": "hoshiminest",
   "version": "0.1.0",
-  "identifier": "com.vaciller.mikanbox",
+  "identifier": "com.vaciller.hoshiminest",
   "build": {
     "beforeDevCommand": "yarn dev",
     "devUrl": "http://localhost:1520",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "mikanbox",
+        "title": "hoshiminest",
         "width": 1360,
         "height": 820,
         "resizable": false,

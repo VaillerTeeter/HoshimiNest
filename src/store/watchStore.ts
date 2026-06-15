@@ -8,7 +8,7 @@ interface WatchEntry {
   updatedAt: number;
 }
 
-const STORAGE_KEY = 'mikanbox-watch-store';
+const STORAGE_KEY = 'hoshiminest-watch-store';
 
 function isWatchEntry(v: unknown): v is WatchEntry {
   if (typeof v !== 'object' || v === null) {
