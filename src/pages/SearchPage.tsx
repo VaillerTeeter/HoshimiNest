@@ -30,6 +30,7 @@ function TermTag({ term, onRemove }: TermTagProps): React.JSX.Element {
       <button
         type="button"
         className="search-tag-close"
+        aria-label="删除"
         onClick={() => {
           onRemove(term.id);
         }}
@@ -63,6 +64,7 @@ function SavedChip({ query, searching, onSearch, onRemove }: SavedChipProps): Re
       <button
         type="button"
         className="search-tag-close"
+        aria-label="删除"
         onClick={() => {
           onRemove(query);
         }}

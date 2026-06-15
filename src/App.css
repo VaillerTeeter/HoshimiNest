@@ -1055,23 +1055,6 @@ body,
   border-color: var(--theme-text-error);
 }
 
-/* 诊断信息行 */
-.dl-diag-row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  font-size: 11px;
-  color: var(--theme-text-muted);
-}
-
-.dl-diag-item {
-  white-space: nowrap;
-}
-
-.dl-diag-sep {
-  color: var(--theme-bar-border);
-}
-
 /* 添加磁力链接按钮 */
 .dl-add-magnet-btn {
   display: inline-flex;
@@ -1084,7 +1067,7 @@ body,
   color: var(--theme-text-on-accent);
   cursor: pointer;
   background: var(--theme-text-score);
-  border: none;
+  border: 0;
   border-radius: 8px;
   transition: opacity 0.12s;
 }
@@ -1101,6 +1084,20 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.dl-modal-overlay::backdrop {
   background: var(--theme-modal-overlay-bg);
 }
 
@@ -1134,10 +1131,10 @@ body,
   line-height: 1.5;
   color: var(--theme-text-primary);
   resize: vertical;
+  outline: 0;
   background: var(--theme-content-bg);
   border: 1.5px solid var(--theme-bar-border);
   border-radius: 8px;
-  outline: none;
   transition: border-color 0.12s;
 }
 

@@ -1,7 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
-
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { useDownload, type TaskStatus, type DownloadTask } from '../store/downloadStore';
 
@@ -315,6 +314,24 @@ function TaskCard({
 
 // ── AddMagnetModal ──────────────────────────────────────────────────────────
 
+/**
+ * Auto-focus a ref element when `open` transitions from false → true.
+ *
+ * @param open - whether the modal is currently open
+ * @param ref - ref to the element to auto-focus
+ */
+function useAutoFocus(open: boolean, ref: React.RefObject<HTMLElement | null>): void {
+  const prevRef = useRef(false);
+  if (open && !prevRef.current) {
+    prevRef.current = true;
+    setTimeout(() => {
+      ref.current?.focus();
+    }, 0);
+  } else if (!open) {
+    prevRef.current = false;
+  }
+}
+
 interface AddMagnetModalProps {
   open: boolean;
   onClose: () => void;
@@ -325,16 +342,20 @@ function AddMagnetModal({ open, onClose, addTask }: AddMagnetModalProps): React.
   const [rawMagnet, setRawMagnet] = useState('');
   const [error, setError] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useAutoFocus(open, textareaRef);
+
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const handleClose = useCallback(() => {
     setRawMagnet('');
     setError('');
+    dialogRef.current?.close();
     onClose();
   }, [onClose]);
 
   const handleConfirm = useCallback(async () => {
     const trimmed = rawMagnet.trim();
-    if (trimmed === '') {
+    if (trimmed.length === 0) {
       return;
     }
     if (!trimmed.startsWith('magnet:')) {
@@ -348,8 +369,8 @@ function AddMagnetModal({ open, onClose, addTask }: AddMagnetModalProps): React.
     }
 
     // Use the magnet hash (truncated) as the task name
-    const hashMatch = /magnet:\?xt=urn:btih:([a-fA-F0-9]+)/i.exec(trimmed);
-    const name = hashMatch?.[1] != null ? hashMatch[1].slice(0, 32) : trimmed.slice(0, 48);
+    const hashMatch = /magnet:\?xt=urn:btih:([\da-f]+)/i.exec(trimmed);
+    const name = hashMatch?.[1] === undefined ? trimmed.slice(0, 48) : hashMatch[1].slice(0, 32);
 
     const taskId = addTask({ name, magnet: trimmed, saveDir: dir });
     if (taskId === '') {
@@ -360,48 +381,30 @@ function AddMagnetModal({ open, onClose, addTask }: AddMagnetModalProps): React.
     handleClose();
   }, [rawMagnet, addTask, handleClose]);
 
-  // Auto-focus textarea when modal opens
-  const prevOpenRef = useRef(false);
-  if (open && !prevOpenRef.current) {
-    prevOpenRef.current = true;
-    setTimeout(() => {
-      textareaRef.current?.focus();
-    }, 0);
-  } else if (!open) {
-    prevOpenRef.current = false;
-  }
+  // Show modal on mount (component only rendered when open); Escape-to-close is native to <dialog>
+  useEffect(() => {
+    dialogRef.current?.showModal();
+  }, []);
 
   if (!open) {
     return null;
   }
 
-  const canConfirm = rawMagnet.trim() !== '';
+  const errorClass = error.length > 0 ? ' dl-modal__input--error' : '';
 
   return (
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-    <div
-      className="dl-modal-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleClose();
-        }
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          handleClose();
-        }
-      }}
-    >
+    <dialog ref={dialogRef} className="dl-modal-overlay" onClose={handleClose}>
       <div className="dl-modal">
         <h2 className="dl-modal__title">添加外部磁力链接</h2>
         <textarea
           ref={textareaRef}
-          className={`dl-modal__input${error !== '' ? ' dl-modal__input--error' : ''}`}
+          className={`dl-modal__input${errorClass}`}
           value={rawMagnet}
           placeholder="在此粘贴 magnet: 链接…"
+          aria-label="磁力链接输入"
           onChange={(e) => {
             setRawMagnet(e.target.value);
-            if (error !== '') {
+            if (error.length > 0) {
               setError('');
             }
           }}
@@ -413,7 +416,7 @@ function AddMagnetModal({ open, onClose, addTask }: AddMagnetModalProps): React.
           }}
           rows={3}
         />
-        {error !== '' && <div className="dl-modal__error">{error}</div>}
+        {error.length > 0 && <div className="dl-modal__error">{error}</div>}
         <div className="dl-modal__actions">
           <button
             type="button"
@@ -425,7 +428,7 @@ function AddMagnetModal({ open, onClose, addTask }: AddMagnetModalProps): React.
           <button
             type="button"
             className="dl-modal__btn dl-modal__btn--confirm"
-            disabled={!canConfirm}
+            disabled={rawMagnet.trim().length === 0}
             onClick={() => {
               void handleConfirm();
             }}
@@ -434,7 +437,7 @@ function AddMagnetModal({ open, onClose, addTask }: AddMagnetModalProps): React.
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 

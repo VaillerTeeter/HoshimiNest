@@ -178,6 +178,7 @@ function WindowControls(): React.JSX.Element {
       <Button
         type="primary"
         size="small"
+        aria-label="最小化"
         onClick={() => {
           void appWindow.minimize();
         }}
@@ -187,6 +188,7 @@ function WindowControls(): React.JSX.Element {
       <Button
         type="primary"
         size="small"
+        aria-label="关闭"
         onClick={() => {
           void appWindow.close();
         }}
