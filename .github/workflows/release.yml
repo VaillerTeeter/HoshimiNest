@@ -16,7 +16,7 @@ jobs:
 
     steps:
       # ── 1. Checkout ──────────────────────────────────────────────────────
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # ── 2. 版本一致性校验 ────────────────────────────────────────────────
       - name: Validate version consistency (tag == tauri.conf.json == Cargo.toml == package.json)
