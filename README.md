@@ -183,6 +183,7 @@
 │   ├── src/
 │   │   ├── lib.rs                             # Tauri 命令 + aria2 控制 + mkvmerge 轨道识别与合并 + BT Tracker 持久化 + 高级参数持久化（AdvancedConfig）
 │   │   └── main.rs                            # Rust 程序入口
+│   ├── tauri.dev.conf.json                    # Tauri dev 配置（覆盖 identifier 为 dev，隔离测试数据）
 │   └── tauri.conf.json                        # Tauri 应用配置（窗口/bundle/权限）
 ├── tsconfig.json                              # TypeScript 编译配置（前端）
 ├── tsconfig.node.json                         # TypeScript 配置（Vite 配置文件）
@@ -210,14 +211,15 @@ yarn install
 
 ```bash
 # Windows PowerShell — 启动完整 Tauri 桌面窗口（热重载）
-yarn tauri dev
+# 使用 --config 加载 dev identifier，与生产安装数据隔离（%LOCALAPPDATA%\com.vaciller.hoshiminest.dev）
+yarn tauri:dev
 ```
 
 ### 构建
 
 ```bash
 # 构建 Windows 安装包（需在 Windows 上运行）
-yarn tauri build
+yarn tauri:build
 ```
 
 ## 测试手顺

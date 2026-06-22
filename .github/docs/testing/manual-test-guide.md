@@ -2,25 +2,25 @@
 
 > 本文档面向测试人员，按页面逐项描述手动操作步骤与预期结果。
 >
-> 前置条件：已按照 [README.md](../../../README.md) 的「开发工作流」章节完成环境搭建，并执行 `yarn tauri dev` 启动应用。
+> 前置条件：已按照 [README.md](../../../README.md) 的「开发工作流」章节完成环境搭建，并执行 `yarn tauri:dev` 启动应用。
 
 ## 测试前准备：清除应用数据
 
 为确保测试从干净状态开始，测试前需删除应用持久化数据（追番收藏、下载记录等 localStorage 数据）。Tauri 应用的 WebView2 数据存储在：
 
 ```text
-%LOCALAPPDATA%\com.vaciller.hoshiminest
+%LOCALAPPDATA%\com.vaciller.hoshiminest.dev
 ```
 
 操作步骤：
 
 1. 关闭 HoshimiNest 应用
-2. 按 `Win + R` → 输入 `%LOCALAPPDATA%\com.vaciller.hoshiminest` → 回车
+2. 按 `Win + R` → 输入 `%LOCALAPPDATA%\com.vaciller.hoshiminest.dev` → 回车
 3. 删除该目录下所有文件和子目录
-4. 重新执行 `yarn tauri dev` 启动应用，终端输出如下：
+4. 重新执行 `yarn tauri:dev` 启动应用，终端输出如下：
 
 ```text
-PS <project-root>> yarn tauri dev
+PS <project-root>> yarn tauri:dev
 yarn run v1.22.22
 $ tauri dev
      Running BeforeDevCommand (`yarn dev`)
@@ -110,7 +110,7 @@ $ vite
 
 ### 2.4 终端日志检查
 
-在执行以上 2.1 ~ 2.3 所有操作过程中，观察 `yarn tauri dev` 终端输出：
+在执行以上 2.1 ~ 2.3 所有操作过程中，观察 `yarn tauri:dev` 终端输出：
 
 > **预期结果**：终端无任何错误日志（`ERROR` / `panic` / `unreachable` / stack trace），仅允许正常的 Vite HMR 和 Cargo 编译信息
 
@@ -460,7 +460,7 @@ $ vite
 ### 8.2 下载中断
 
 1. 在下载进行中（参考 [8.1 下载状态截图](#81-下载状态截图)），点击顶栏 `X` 按钮关闭应用
-2. 重新执行 `yarn tauri dev` 启动应用
+2. 重新执行 `yarn tauri:dev` 启动应用
 3. 进入「下载管理」页面
 
 > **预期结果**：之前正在下载的任务显示为「中断」状态
@@ -549,7 +549,7 @@ $ vite
 1. 在「季度查询」页面中，将若干个番剧分别添加为「正在追番」「补番计划」「已完番剧」
 2. 切换到对应页面确认番剧已正确显示
 3. 点击顶栏 `X` 按钮关闭应用
-4. 重新执行 `yarn tauri dev` 启动应用
+4. 重新执行 `yarn tauri:dev` 启动应用
 5. 依次点击「正在追番」「补番计划」「已完番剧」
 
 > **预期结果**：三个页面中先前添加的番剧数据完整保留，无丢失
