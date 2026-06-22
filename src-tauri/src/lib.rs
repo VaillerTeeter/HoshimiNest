@@ -116,6 +116,18 @@ struct Closing(AtomicBool);
 /// Whether any mkvmerge job is currently running in the merge queue
 struct MergeRunning(AtomicBool);
 
+/// Handle to the currently-running mkvmerge child process (if any).
+/// Stored so the close handler can forcefully terminate it if needed.
+struct MkvChild(Mutex<Option<CommandChild>>);
+
+/// Windows Job Object handle stored as `usize` (raw HANDLE = *mut c_void cast).
+/// Every sidecar process (aria2c, mkvmerge) is assigned to this job.
+/// `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` ensures all members are killed when
+/// the last handle closes — including on process crash, with no cleanup code.
+/// Value 0 means the job was not successfully created.
+#[cfg(windows)]
+struct WinJob(Mutex<usize>);
+
 // ── Compile-time configuration (编译时配置) ─────────────────────────────────
 //
 // 修改 src-tauri/app-config.json 后重新编译即可生效。
@@ -664,11 +676,22 @@ async fn run_mkvmerge_job(app: &tauri::AppHandle, job: &MergeJobReq) -> Result<(
         format!("找不到 mkvmerge sidecar: {e}")
     })?;
 
-    let (mut rx, _child) = sidecar_cmd.args(&args).spawn().map_err(|e| {
+    let (mut rx, child) = sidecar_cmd.args(&args).spawn().map_err(|e| {
         error!("[merge][{}] mkvmerge 启动失败: {e}", job.id);
         format!("mkvmerge 启动失败: {e}")
     })?;
     debug!("[merge][{}] mkvmerge 已启动", job.id);
+
+    // Assign to Windows Job Object so the process is killed with the app on crash.
+    #[cfg(windows)]
+    {
+        let job_val = *app.state::<WinJob>().0.lock().unwrap_or_else(|e| e.into_inner());
+        if job_val != 0 {
+            win_assign_pid_to_job(job_val, child.pid());
+        }
+    }
+    // Store child so the close handler can kill it if needed.
+    *app.state::<MkvChild>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some(child);
 
     let mut last_err: Vec<u8> = Vec::new();
     let mut last_pct: u8 = 0;
@@ -709,6 +732,7 @@ async fn run_mkvmerge_job(app: &tauri::AppHandle, job: &MergeJobReq) -> Result<(
                 } else if code != 0 {
                     let msg = String::from_utf8_lossy(&last_err);
                     error!("[merge][{}] 合并失败: {}", job.id, msg.trim());
+                    app.state::<MkvChild>().0.lock().unwrap_or_else(|e| e.into_inner()).take();
                     return Err(format!("mkvmerge 退出码 {code}: {}", msg.trim()));
                 }
                 info!("[merge][{}] 合并成功完成", job.id);
@@ -721,7 +745,150 @@ async fn run_mkvmerge_job(app: &tauri::AppHandle, job: &MergeJobReq) -> Result<(
             _ => {}
         }
     }
+    // Process has exited — clear the stored child handle.
+    app.state::<MkvChild>().0.lock().unwrap_or_else(|e| e.into_inner()).take();
     Ok(())
+}
+
+// ── Windows Job Object helpers ──────────────────────────────────────────────
+//
+// All sidecar processes (aria2c, mkvmerge) are added to a single Windows Job
+// Object configured with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.  When the last
+// handle to the job closes — whether via normal exit or crash — Windows kills
+// every process in the job automatically, with no cleanup code required.
+//
+// Raw extern "system" FFI is used here instead of a windows-sys/windows crate
+// dependency: kernel32.dll is always linked on Windows, the Job Object API has
+// been stable since Windows XP, and this avoids any crate version conflicts.
+
+#[cfg(windows)]
+#[allow(clippy::upper_case_acronyms)] // intentionally mirrors Windows SDK naming conventions
+mod win_ffi {
+    pub type HANDLE = *mut core::ffi::c_void;
+    pub type BOOL   = i32;
+    pub type DWORD  = u32;
+
+    pub const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE: DWORD = 0x0000_2000;
+    /// JobObjectExtendedLimitInformation
+    pub const JOB_EXTENDED_LIMIT_INFO: i32         = 9;
+    pub const PROCESS_SET_QUOTA: DWORD              = 0x0100;
+    pub const PROCESS_TERMINATE: DWORD              = 0x0001;
+
+    // Mirrors JOBOBJECT_BASIC_LIMIT_INFORMATION (64 bytes on x64).
+    // Field order and repr(C) must match the Windows SDK layout exactly.
+    #[repr(C)]
+    pub struct BasicLimitInfo {
+        pub per_process_time: i64,    // PerProcessUserTimeLimit
+        pub per_job_time: i64,        // PerJobUserTimeLimit
+        pub limit_flags: DWORD,       // LimitFlags
+        pub _pad: DWORD,              // explicit padding to align next usize field
+        pub min_ws: usize,            // MinimumWorkingSetSize
+        pub max_ws: usize,            // MaximumWorkingSetSize
+        pub active_process_limit: DWORD,
+        pub _pad2: DWORD,
+        pub affinity: usize,
+        pub priority_class: DWORD,
+        pub scheduling_class: DWORD,
+    }
+
+    // Mirrors IO_COUNTERS (48 bytes).
+    #[repr(C)]
+    pub struct IoCounters {
+        pub read_ops:    u64,
+        pub write_ops:   u64,
+        pub other_ops:   u64,
+        pub read_bytes:  u64,
+        pub write_bytes: u64,
+        pub other_bytes: u64,
+    }
+
+    // Mirrors JOBOBJECT_EXTENDED_LIMIT_INFORMATION (144 bytes on x64).
+    #[repr(C)]
+    pub struct ExtendedLimitInfo {
+        pub basic:                  BasicLimitInfo,
+        pub io_info:                IoCounters,
+        pub process_memory_limit:   usize,
+        pub job_memory_limit:       usize,
+        pub peak_process_memory:    usize,
+        pub peak_job_memory:        usize,
+    }
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        pub fn CreateJobObjectW(
+            lp_security: *const core::ffi::c_void,
+            lp_name: *const u16,
+        ) -> HANDLE;
+
+        pub fn SetInformationJobObject(
+            h_job: HANDLE,
+            info_class: i32,
+            lp_info: *const core::ffi::c_void,
+            cb_info_len: DWORD,
+        ) -> BOOL;
+
+        pub fn AssignProcessToJobObject(h_job: HANDLE, h_proc: HANDLE) -> BOOL;
+
+        pub fn OpenProcess(
+            desired_access: DWORD,
+            inherit: BOOL,
+            pid: DWORD,
+        ) -> HANDLE;
+
+        pub fn CloseHandle(h: HANDLE) -> BOOL;
+    }
+}
+
+/// Create an anonymous Job Object with kill-on-close semantics.
+/// Returns the raw HANDLE cast to `usize` (Send-safe opaque storage), or `None` on failure.
+#[cfg(windows)]
+fn win_create_job() -> Option<usize> {
+    use win_ffi::*;
+
+    let job = unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) };
+    if job.is_null() {
+        return None;
+    }
+
+    // Safety: zero-initialised POD struct; only limit_flags is set.
+    let mut info: ExtendedLimitInfo = unsafe { std::mem::zeroed() };
+    info.basic.limit_flags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+    let ok = unsafe {
+        SetInformationJobObject(
+            job,
+            JOB_EXTENDED_LIMIT_INFO,
+            std::ptr::addr_of!(info).cast(),
+            std::mem::size_of::<ExtendedLimitInfo>() as DWORD,
+        )
+    };
+    if ok == 0 {
+        unsafe { CloseHandle(job) };
+        return None;
+    }
+    // Cast *mut c_void → usize for Send-safe Mutex storage.
+    Some(job as usize)
+}
+
+/// Assign a process (by PID) to the app Job Object so it gets killed when
+/// the job handle closes.  Logs a warning on failure but never panics.
+#[cfg(windows)]
+fn win_assign_pid_to_job(job: usize, pid: u32) {
+    use win_ffi::*;
+
+    let job_handle = job as HANDLE;
+    let proc = unsafe { OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, 0, pid) };
+    if proc.is_null() {
+        warn!("[job] OpenProcess pid={pid} 失败");
+        return;
+    }
+    let ok = unsafe { AssignProcessToJobObject(job_handle, proc) };
+    if ok == 0 {
+        warn!("[job] AssignProcessToJobObject pid={pid} 失败");
+    } else {
+        info!("[job] pid={pid} 已加入 Job Object");
+    }
+    unsafe { CloseHandle(proc) };
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────
@@ -735,7 +902,7 @@ async fn identify_tracks(app: tauri::AppHandle, path: String) -> Result<Vec<Trac
         format!("找不到 mkvmerge sidecar: {e}")
     })?;
 
-    let (mut rx, _child) = sidecar_cmd
+    let (mut rx, child) = sidecar_cmd
         .args(["--identify", "--identification-format", "json", &path])
         .spawn()
         .map_err(|e| {
@@ -743,6 +910,16 @@ async fn identify_tracks(app: tauri::AppHandle, path: String) -> Result<Vec<Trac
             format!("mkvmerge 启动失败: {e}")
         })?;
     debug!("[identify] mkvmerge --identify 已启动");
+
+    // Assign to Windows Job Object so it is killed with the app on crash.
+    #[cfg(windows)]
+    {
+        let job_val = *app.state::<WinJob>().0.lock().unwrap_or_else(|e| e.into_inner());
+        if job_val != 0 {
+            win_assign_pid_to_job(job_val, child.pid());
+        }
+    }
+    let _child = child; // keep handle alive until the process exits
 
     let mut stdout_buf: Vec<u8> = Vec::new();
     let mut stderr_buf: Vec<u8> = Vec::new();
@@ -1112,12 +1289,20 @@ pub fn run() {
     // Initialise env_logger so `RUST_LOG=hoshiminest=debug yarn tauri dev` shows debug output.
     // No-op when RUST_LOG is unset; produces no output in normal use.
     let _ = env_logger::try_init();
-    if let Err(e) = tauri::Builder::default()
+    // Build up managed state. WinJob is Windows-only so we must break the
+    // method chain to apply it conditionally with #[cfg(windows)].
+    let mut builder = tauri::Builder::default()
         .manage(GidMap(Mutex::new(HashMap::new())))
         .manage(PollStops(Mutex::new(HashMap::new())))
         .manage(Aria2Child(Mutex::new(None)))
         .manage(Closing(AtomicBool::new(false)))
         .manage(MergeRunning(AtomicBool::new(false)))
+        .manage(MkvChild(Mutex::new(None)));
+    #[cfg(windows)]
+    {
+        builder = builder.manage(WinJob(Mutex::new(0usize)));
+    }
+    if let Err(e) = builder
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -1134,6 +1319,18 @@ pub fn run() {
                 cfg.listen_port_end
             );
 
+            // Create the Windows Job Object before spawning any sidecars.
+            // All child processes are assigned to this job; JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+            // ensures they die with HoshimiNest — even on crash, no cleanup code needed.
+            #[cfg(windows)]
+            match win_create_job() {
+                Some(h) => {
+                    *app.handle().state::<WinJob>().0.lock().unwrap_or_else(|e| e.into_inner()) = h;
+                    info!("[job] Windows Job Object 创建成功 (kill-on-close 已启用)");
+                },
+                None => warn!("[job] Windows Job Object 创建失败，子进程将不受 Job 约束"),
+            }
+
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 let client = reqwest::Client::new();
@@ -1146,7 +1343,7 @@ pub fn run() {
                 let listen_port_arg =
                     format!("--listen-port={}-{}", cfg.listen_port_start, cfg.listen_port_end);
 
-                let child_result = handle
+                let spawn_result = handle
                     .shell()
                     .sidecar("aria2c")
                     .map_err(|e| error!("aria2c sidecar not found: {e}"))
@@ -1167,11 +1364,28 @@ pub fn run() {
                             &bt_tracker_arg
                         ])
                         .spawn()
-                        .map(|(_rx, child)| child)
                         .map_err(|e| error!("Failed to spawn aria2c: {e}"))
                     });
 
-                if let Ok(child) = child_result {
+                if let Ok((rx, child)) = spawn_result {
+                    // Drain stdout/stderr to keep the pipe alive.
+                    // aria2c uses --quiet=true so output is negligible, but dropping
+                    // the receiver end prematurely can cause broken-pipe issues.
+                    tauri::async_runtime::spawn(async move {
+                        let mut rx = rx;
+                        while rx.recv().await.is_some() {}
+                    });
+
+                    #[cfg(windows)]
+                    {
+                        let job_val = *handle
+                            .state::<WinJob>()
+                            .0.lock().unwrap_or_else(|e| e.into_inner());
+                        if job_val != 0 {
+                            win_assign_pid_to_job(job_val, child.pid());
+                        }
+                    }
+
                     info!("[aria2] 已启动 (port {ARIA2_PORT})");
                     *handle.state::<Aria2Child>().0.lock().unwrap_or_else(|e| e.into_inner()) =
                         Some(child);
@@ -1207,6 +1421,15 @@ pub fn run() {
                 let app = window.app_handle().clone();
                 let win = window.clone();
                 tauri::async_runtime::spawn(async move {
+                    // Terminate any running mkvmerge process first.
+                    // (MergeRunning normally prevents reaching here during a merge,
+                    // but this is a safety net for race conditions.)
+                    if let Some(child) =
+                        app.state::<MkvChild>().0.lock().unwrap_or_else(|e| e.into_inner()).take()
+                    {
+                        info!("[mkvmerge] 关闭时强制终止 mkvmerge 进程");
+                        let _ = child.kill();
+                    }
                     info!("[aria2] 正在关闭…");
                     let client = reqwest::Client::new();
                     let _ = aria2_call(&client, "aria2.shutdown", aria2_shutdown_params()).await;
