@@ -17,7 +17,9 @@
         "height": 820,
         "resizable": false,
         "maximizable": false,
-        "decorations": false
+        "decorations": false,
+        "visible": false,
+        "backgroundColor": "#f8f8f0"
       }
     ],
     "security": {
