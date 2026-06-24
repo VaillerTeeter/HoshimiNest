@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "hoshiminest",
-  "version": "1.0.0",
-  "identifier": "com.vaciller.hoshiminest",
+  "productName": "HoshimiNest",
+  "version": "1.0.1",
+  "identifier": "HoshimiNest",
   "build": {
     "beforeDevCommand": "yarn dev",
     "devUrl": "http://localhost:1520",
@@ -12,27 +12,34 @@
   "app": {
     "windows": [
       {
-        "title": "hoshiminest",
+        "title": "HoshimiNest",
         "width": 1360,
         "height": 820,
         "resizable": false,
         "maximizable": false,
-        "decorations": false
+        "decorations": false,
+        "visible": false,
+        "backgroundColor": "#f8f8f0"
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self'; script-src 'self'; connect-src ipc: http://ipc.localhost https://api.bgm.tv; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'"
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": "nsis",
     "externalBin": ["binaries/aria2c", "binaries/mkvmerge"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "languages": ["SimpChinese", "English"]
+      }
+    }
   }
 }

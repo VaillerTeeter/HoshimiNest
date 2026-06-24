@@ -1419,24 +1419,17 @@ pub fn run() {
                     let _ = window.emit("merge-block-close", ());
                     return;
                 }
-                // Use an AtomicBool to break the re-entry loop:
-                // first call → prevent close, clean up aria2, then win.close().
-                // second call (triggered by win.close()) → flag is set, let it
-                // proceed normally. This allows WebView2 to close gracefully
-                // and flush localStorage to disk — app.exit(0) would kill the
-                // process too abruptly for WebView2 to write pending data.
+                // De-duplicate: the first CloseRequested fires background cleanup;
+                // subsequent ones (e.g. from OS-level close) are no-ops.
                 let closing = window.app_handle().state::<Closing>();
                 if closing.0.swap(true, Ordering::SeqCst) {
-                    // Second time: already cleaned up, allow the close.
                     return;
                 }
-                api.prevent_close();
+                // Let the window close immediately so the user perceives zero delay.
+                // Cleanup (aria2 shutdown + kill child processes) runs in a background
+                // task and calls process::exit(0) once finished.
                 let app = window.app_handle().clone();
-                let win = window.clone();
                 tauri::async_runtime::spawn(async move {
-                    // Terminate any running mkvmerge process first.
-                    // (MergeRunning normally prevents reaching here during a merge,
-                    // but this is a safety net for race conditions.)
                     if let Some(child) =
                         app.state::<MkvChild>().0.lock().unwrap_or_else(|e| e.into_inner()).take()
                     {
@@ -1444,25 +1437,22 @@ pub fn run() {
                         let _ = child.kill();
                     }
                     info!("[aria2] 正在关闭…");
-                    let client = reqwest::Client::new();
+                    // Use a short timeout for shutdown — aria2c typically responds
+                    // in <100 ms, and we don't want to keep the background task
+                    // alive for the full 8 s of the general-purpose aria2_call.
+                    let client = reqwest::Client::builder()
+                        .timeout(Duration::from_secs(2))
+                        .build()
+                        .unwrap_or_else(|_| reqwest::Client::new());
                     let _ = aria2_call(&client, "aria2.shutdown", aria2_shutdown_params()).await;
                     if let Some(child) =
                         app.state::<Aria2Child>().0.lock().unwrap_or_else(|e| e.into_inner()).take()
                     {
                         let _ = child.kill();
                     }
-                    // Small delay so WebView2 can finish any pending I/O before
-                    // the natural window-close triggers process exit.
-                    tokio::time::sleep(Duration::from_millis(300)).await;
-                    // This re-triggers CloseRequested but the flag is now true,
-                    // so we skip prevent_close and the window closes gracefully.
-                    let _ = win.close();
-                    // Wait for WebView2 to flush localStorage to disk after the
-                    // window is destroyed, then explicitly exit with code 0 so
-                    // that `cargo run` / `yarn tauri dev` don't report a
-                    // spurious error (Windows default exit code for window-close
-                    // termination is 0xFFFFFFFF).
-                    tokio::time::sleep(Duration::from_millis(300)).await;
+                    // Explicit exit 0 so `cargo run` / `yarn tauri dev` don't
+                    // report a spurious error (Windows default exit code for
+                    // window-close termination is 0xFFFFFFFF).
                     std::process::exit(0);
                 });
             }

@@ -216,6 +216,11 @@ function AppInner(): React.JSX.Element {
   } | null>(null);
   const queryCancelRef = useRef<(() => void) | null>(null);
 
+  // Show the window once React has mounted and rendered
+  useEffect(() => {
+    void appWindow.show();
+  }, []);
+
   // Listen for merge-block-close event from the backend: show a modal dialog
   // to inform the user that merge tasks are still running.
   useEffect(() => {

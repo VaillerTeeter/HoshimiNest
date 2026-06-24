@@ -111,4 +111,4 @@ yarn rustcheck    # cargo check (Rust compilation check only)
 ## Window Config
 
 - Window: 1360×820, non-resizable, non-maximizable, frameless (custom titlebar)
-- App identifier: `com.vaciller.hoshiminest`
+- App identifier: `HoshimiNest`
