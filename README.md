@@ -222,6 +222,30 @@ yarn tauri:dev
 yarn tauri:build
 ```
 
+## 发版流程
+
+1. 同步更新以下 3 个文件的 `version` 字段为同一版本号：
+   - `src-tauri/tauri.conf.json`
+   - `src-tauri/Cargo.toml`
+   - `package.json`
+
+2. 暂存并提交：
+
+   ```bash
+   git add src-tauri/tauri.conf.json src-tauri/Cargo.toml package.json
+   git commit -m "chore: bump version to X.Y.Z"
+   ```
+
+3. 打 tag 并推送：
+
+   ```bash
+   git tag -a vX.Y.Z -m "vX.Y.Z"
+   git push
+   git push origin vX.Y.Z
+   ```
+
+4. push tag 后，CI（`.github/workflows/release.yml`）自动校验版本一致性、编译打包、创建 GitHub Release。
+
 ## 测试手顺
 
 > 详细的 UI 手动测试步骤请参阅 [manual-test-guide.md](.github/docs/testing/manual-test-guide.md)。
