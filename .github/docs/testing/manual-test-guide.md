@@ -2,25 +2,25 @@
 
 > 本文档面向测试人员，按页面逐项描述手动操作步骤与预期结果。
 >
-> 前置条件：已按照 [README.md](../../../README.md) 的「开发工作流」章节完成环境搭建，并执行 `yarn tauri dev` 启动应用。
+> 前置条件：已按照 [README.md](../../../README.md) 的「开发工作流」章节完成环境搭建，并执行 `yarn tauri:dev` 启动应用。
 
 ## 测试前准备：清除应用数据
 
 为确保测试从干净状态开始，测试前需删除应用持久化数据（追番收藏、下载记录等 localStorage 数据）。Tauri 应用的 WebView2 数据存储在：
 
 ```text
-%LOCALAPPDATA%\com.vaciller.hoshiminest
+%LOCALAPPDATA%\com.vaciller.hoshiminest.dev
 ```
 
 操作步骤：
 
 1. 关闭 HoshimiNest 应用
-2. 按 `Win + R` → 输入 `%LOCALAPPDATA%\com.vaciller.hoshiminest` → 回车
+2. 按 `Win + R` → 输入 `%LOCALAPPDATA%\com.vaciller.hoshiminest.dev` → 回车
 3. 删除该目录下所有文件和子目录
-4. 重新执行 `yarn tauri dev` 启动应用，终端输出如下：
+4. 重新执行 `yarn tauri:dev` 启动应用，终端输出如下：
 
 ```text
-PS <project-root>> yarn tauri dev
+PS <project-root>> yarn tauri:dev
 yarn run v1.22.22
 $ tauri dev
      Running BeforeDevCommand (`yarn dev`)
@@ -45,10 +45,10 @@ $ vite
 
 | 季度查询 | 正在追番 |
 | ---------- | ---------- |
-| ![季度查询](screenshots/01-query-initial.png)<br>*季度查询初始状态* | ![正在追番](screenshots/01-watching-initial.png)<br>*正在追番初始状态* |
-| ![补番计划](screenshots/01-backlog-initial.png)<br>*补番计划初始状态* | ![已完番剧](screenshots/01-finished-initial.png)<br>*已完番剧初始状态* |
-| ![搜索资源](screenshots/01-search-initial.png)<br>*搜索资源初始状态* | ![下载管理](screenshots/01-download-initial.png)<br>*下载管理初始状态* |
-| ![轨道工坊](screenshots/01-tracks-initial.png)<br>*轨道工坊初始状态* | |
+| ![季度查询](screenshots/01-query-initial.png)*季度查询初始状态* | ![正在追番](screenshots/01-watching-initial.png)*正在追番初始状态* |
+| ![补番计划](screenshots/01-backlog-initial.png)*补番计划初始状态* | ![已完番剧](screenshots/01-finished-initial.png)*已完番剧初始状态* |
+| ![搜索资源](screenshots/01-search-initial.png)*搜索资源初始状态* | ![下载管理](screenshots/01-download-initial.png)*下载管理初始状态* |
+| ![轨道工坊](screenshots/01-tracks-initial.png)*轨道工坊初始状态* | |
 
 ---
 
@@ -110,7 +110,7 @@ $ vite
 
 ### 2.4 终端日志检查
 
-在执行以上 2.1 ~ 2.3 所有操作过程中，观察 `yarn tauri dev` 终端输出：
+在执行以上 2.1 ~ 2.3 所有操作过程中，观察 `yarn tauri:dev` 终端输出：
 
 > **预期结果**：终端无任何错误日志（`ERROR` / `panic` / `unreachable` / stack trace），仅允许正常的 Vite HMR 和 Cargo 编译信息
 
@@ -445,7 +445,7 @@ $ vite
 
 ## 8. 下载管理
 
-> **说明**：磁力链接的添加方式已在 [7. 搜索资源](#7-搜索资源) 中说明。
+> **说明**：下载任务可通过 [7. 搜索资源](#7-搜索资源) 的磁力链接按钮添加，也可通过本页的磁力链接输入框直接添加（见下方 [磁力链接直接添加](#磁力链接直接添加)）。
 
 ### 8.1 下载状态截图
 
@@ -453,17 +453,46 @@ $ vite
 
 | | |
 | --- | --- |
-| ![两个正在下载](screenshots/08-download-two-active.png)<br>*两个正在下载* | ![暂停一个下载](screenshots/08-download-one-paused.png)<br>*暂停一个下载* |
-| ![暂停两个下载](screenshots/08-download-two-paused.png)<br>*暂停两个下载* | ![取消一个下载](screenshots/08-download-one-cancelled.png)<br>*取消一个下载* |
-| ![取消两个下载](screenshots/08-download-two-cancelled.png)<br>*取消两个下载* | ![删除一个记录](screenshots/08-download-one-deleted.png)<br>*删除一个记录* |
+| ![两个正在下载](screenshots/08-download-two-active.png)*两个正在下载* | ![暂停一个下载](screenshots/08-download-one-paused.png)*暂停一个下载* |
+| ![暂停两个下载](screenshots/08-download-two-paused.png)*暂停两个下载* | ![取消一个下载](screenshots/08-download-one-cancelled.png)*取消一个下载* |
+| ![取消两个下载](screenshots/08-download-two-cancelled.png)*取消两个下载* | ![删除一个记录](screenshots/08-download-one-deleted.png)*删除一个记录* |
+
+#### 下载文件夹状态
+
+| 下载进行或暂停时 | 取消下载后 |
+| --- | --- |
+| ![下载进行/暂停时的文件夹](screenshots/08-download-folder-active.png) | ![取消下载后的文件夹](screenshots/08-download-folder-cancelled.png) |
+
+1. **进行与暂停**：两个正在下载、暂停一个下载、暂停两个下载 — 仅涉及下载的进行与暂停操作，文件夹中的文件如图（08-download-folder-active.png），所有文件均保留，不会被删除
+2. **取消下载**：取消操作会删除对应的下载文件，文件夹变为如图（08-download-folder-cancelled.png）所示
+3. **已取消任务重新添加限制**：已取消但未删除的任务无法通过在搜索资源界面重新添加下载；只有将已取消的任务从列表中删除后，才能重新添加同一资源的下载
+4. **磁力链接添加方式等效**：通过磁力链接按钮直接添加的下载任务，与通过搜索资源界面添加的下载任务，在取消、暂停、删除等所有操作逻辑上完全一致
+
+#### 磁力链接直接添加
+
+| 输入磁力链接 | 下载中状态 |
+| --- | --- |
+| ![磁力链接输入框](screenshots/08-download-magnet-input.png) | ![磁力链接下载中](screenshots/08-download-magnet-active.png) |
+
+1. 在下载管理页面的磁力链接输入框中粘贴磁力链接
+2. 点击下载按钮 → 弹出文件夹选择对话框，选择目标文件夹后任务添加到下载队列
+3. 通过磁力链接直接添加的下载任务与搜索资源界面添加的任务，在状态显示、操作按钮（暂停/取消/删除）等方面完全一致
+4. 示例磁力链接：
+
+<!-- cSpell:disable -->
+   ```magnet
+   magnet:?xt=urn:btih:QER5LYPJAXZQAUYKHNSLO4O6MNV6UD6A&dn=%5BSubsPlease%5D%20Sousou%20no%20Frieren%20-%2028%20%281080p%29%20%5B8BBBC28C%5D.mkv&xl=1490354395&tr=http%3A%2F%2Fnyaa.tracker.wf%3A7777%2Fannounce&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce&tr=http%3A%2F%2Ftracker.mywaifu.best%3A6969%2Fannounce&tr=https%3A%2F%2Ftracker.zhuqiy.com%3A443%2Fannounce&tr=udp%3A%2F%2Ftracker.tryhackx.org%3A6969%2Fannounce&tr=udp%3A%2F%2Fretracker.hotplug.ru%3A2710%2Fannounce&tr=udp%3A%2F%2Ftracker.dler.com%3A6969%2Fannounce&tr=http%3A%2F%2Ftracker.beeimg.com%3A6969%2Fannounce&tr=udp%3A%2F%2Ft.overflow.biz%3A6969%2Fannounce&tr=wss%3A%2F%2Ftracker.openwebtorrent.com
+   ```
+<!-- cSpell:enable -->
 
 ### 8.2 下载中断
 
-1. 在下载进行中（参考 [8.1 下载状态截图](#81-下载状态截图)），点击顶栏 `X` 按钮关闭应用
-2. 重新执行 `yarn tauri dev` 启动应用
-3. 进入「下载管理」页面
+1. 在下载管理页面中，确保有任务处于「下载中」或「已暂停」状态（参考 [8.1 下载状态截图](#81-下载状态截图)）
+2. 点击顶栏 `X` 按钮关闭应用
+3. 重新执行 `yarn tauri:dev` 启动应用
+4. 进入「下载管理」页面
 
-> **预期结果**：之前正在下载的任务显示为「中断」状态
+> **预期结果**：之前处于「下载中」和「已暂停」状态的任务均显示为「中断」状态；已取消和已完成的任务状态不变。
 
 ![下载中断](screenshots/08-download-close-interrupted.png)
 
@@ -489,6 +518,15 @@ $ vite
 > **预期结果**：打开系统文件管理器并定位到下载文件所在目录
 
 ![打开下载文件夹](screenshots/08-download-open-folder.png)
+
+#### 下载完成通知
+
+| 下载完成弹窗通知 | 消息中心通知记录 |
+| --- | --- |
+| ![下载完成弹窗](screenshots/08-download-notification-toast.png) | ![消息中心](screenshots/08-download-notification-center.png) |
+
+1. 下载任务完成后，Windows 右下角会弹出通知弹窗
+2. 点击 Windows 右下角时间区域的消息中心图标，可查看通知历史记录
 
 ---
 
@@ -538,6 +576,15 @@ $ vite
 
 ![合并完成](screenshots/09-tracks-merge-complete.png)
 
+#### 合并完成通知
+
+| | |
+| --- | --- |
+| ![合并完成弹窗](screenshots/09-tracks-notification-toast.png)*合并完成弹窗通知* | ![消息中心](screenshots/09-tracks-notification-center.png)*消息中心通知记录* |
+
+1. 合并任务完成后，Windows 右下角会弹出通知弹窗
+2. 点击 Windows 右下角时间区域的消息中心图标，可查看通知历史记录
+
 ---
 
 ## 10. 通用功能
@@ -549,7 +596,7 @@ $ vite
 1. 在「季度查询」页面中，将若干个番剧分别添加为「正在追番」「补番计划」「已完番剧」
 2. 切换到对应页面确认番剧已正确显示
 3. 点击顶栏 `X` 按钮关闭应用
-4. 重新执行 `yarn tauri dev` 启动应用
+4. 重新执行 `yarn tauri:dev` 启动应用
 5. 依次点击「正在追番」「补番计划」「已完番剧」
 
 > **预期结果**：三个页面中先前添加的番剧数据完整保留，无丢失
