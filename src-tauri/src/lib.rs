@@ -765,75 +765,71 @@ async fn run_mkvmerge_job(app: &tauri::AppHandle, job: &MergeJobReq) -> Result<(
 #[allow(clippy::upper_case_acronyms)] // intentionally mirrors Windows SDK naming conventions
 mod win_ffi {
     pub type HANDLE = *mut core::ffi::c_void;
-    pub type BOOL   = i32;
-    pub type DWORD  = u32;
+    pub type BOOL = i32;
+    pub type DWORD = u32;
 
     pub const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE: DWORD = 0x0000_2000;
     /// JobObjectExtendedLimitInformation
-    pub const JOB_EXTENDED_LIMIT_INFO: i32         = 9;
-    pub const PROCESS_SET_QUOTA: DWORD              = 0x0100;
-    pub const PROCESS_TERMINATE: DWORD              = 0x0001;
+    pub const JOB_EXTENDED_LIMIT_INFO: i32 = 9;
+    pub const PROCESS_SET_QUOTA: DWORD = 0x0100;
+    pub const PROCESS_TERMINATE: DWORD = 0x0001;
 
     // Mirrors JOBOBJECT_BASIC_LIMIT_INFORMATION (64 bytes on x64).
     // Field order and repr(C) must match the Windows SDK layout exactly.
     #[repr(C)]
     pub struct BasicLimitInfo {
-        pub per_process_time: i64,    // PerProcessUserTimeLimit
-        pub per_job_time: i64,        // PerJobUserTimeLimit
-        pub limit_flags: DWORD,       // LimitFlags
-        pub _pad: DWORD,              // explicit padding to align next usize field
-        pub min_ws: usize,            // MinimumWorkingSetSize
-        pub max_ws: usize,            // MaximumWorkingSetSize
+        pub per_process_time: i64, // PerProcessUserTimeLimit
+        pub per_job_time: i64,     // PerJobUserTimeLimit
+        pub limit_flags: DWORD,    // LimitFlags
+        pub _pad: DWORD,           // explicit padding to align next usize field
+        pub min_ws: usize,         // MinimumWorkingSetSize
+        pub max_ws: usize,         // MaximumWorkingSetSize
         pub active_process_limit: DWORD,
         pub _pad2: DWORD,
         pub affinity: usize,
         pub priority_class: DWORD,
-        pub scheduling_class: DWORD,
+        pub scheduling_class: DWORD
     }
 
     // Mirrors IO_COUNTERS (48 bytes).
     #[repr(C)]
     pub struct IoCounters {
-        pub read_ops:    u64,
-        pub write_ops:   u64,
-        pub other_ops:   u64,
-        pub read_bytes:  u64,
+        pub read_ops: u64,
+        pub write_ops: u64,
+        pub other_ops: u64,
+        pub read_bytes: u64,
         pub write_bytes: u64,
-        pub other_bytes: u64,
+        pub other_bytes: u64
     }
 
     // Mirrors JOBOBJECT_EXTENDED_LIMIT_INFORMATION (144 bytes on x64).
     #[repr(C)]
     pub struct ExtendedLimitInfo {
-        pub basic:                  BasicLimitInfo,
-        pub io_info:                IoCounters,
-        pub process_memory_limit:   usize,
-        pub job_memory_limit:       usize,
-        pub peak_process_memory:    usize,
-        pub peak_job_memory:        usize,
+        pub basic: BasicLimitInfo,
+        pub io_info: IoCounters,
+        pub process_memory_limit: usize,
+        pub job_memory_limit: usize,
+        pub peak_process_memory: usize,
+        pub peak_job_memory: usize
     }
 
     #[link(name = "kernel32")]
     extern "system" {
         pub fn CreateJobObjectW(
             lp_security: *const core::ffi::c_void,
-            lp_name: *const u16,
+            lp_name: *const u16
         ) -> HANDLE;
 
         pub fn SetInformationJobObject(
             h_job: HANDLE,
             info_class: i32,
             lp_info: *const core::ffi::c_void,
-            cb_info_len: DWORD,
+            cb_info_len: DWORD
         ) -> BOOL;
 
         pub fn AssignProcessToJobObject(h_job: HANDLE, h_proc: HANDLE) -> BOOL;
 
-        pub fn OpenProcess(
-            desired_access: DWORD,
-            inherit: BOOL,
-            pid: DWORD,
-        ) -> HANDLE;
+        pub fn OpenProcess(desired_access: DWORD, inherit: BOOL, pid: DWORD) -> HANDLE;
 
         pub fn CloseHandle(h: HANDLE) -> BOOL;
     }
@@ -845,24 +841,31 @@ mod win_ffi {
 fn win_create_job() -> Option<usize> {
     use win_ffi::*;
 
+    // SAFETY: null name argument creates an unnamed job object per MSDN.
+    // nosemgrep: rust-unsafe-block
     let job = unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) };
     if job.is_null() {
         return None;
     }
 
-    // Safety: zero-initialised POD struct; only limit_flags is set.
+    // SAFETY: ExtendedLimitInfo is a POD struct; zero-initialisation is safe.
+    // nosemgrep: rust-unsafe-block
     let mut info: ExtendedLimitInfo = unsafe { std::mem::zeroed() };
     info.basic.limit_flags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
 
+    // SAFETY: job is a valid HANDLE; info is a valid POD struct; size matches.
+    // nosemgrep: rust-unsafe-block
     let ok = unsafe {
         SetInformationJobObject(
             job,
             JOB_EXTENDED_LIMIT_INFO,
             std::ptr::addr_of!(info).cast(),
-            std::mem::size_of::<ExtendedLimitInfo>() as DWORD,
+            std::mem::size_of::<ExtendedLimitInfo>() as DWORD
         )
     };
     if ok == 0 {
+        // SAFETY: job handle is valid (non-null).
+        // nosemgrep: rust-unsafe-block
         unsafe { CloseHandle(job) };
         return None;
     }
@@ -877,17 +880,24 @@ fn win_assign_pid_to_job(job: usize, pid: u32) {
     use win_ffi::*;
 
     let job_handle = job as HANDLE;
+    // SAFETY: access mask combines documented PROCESS_SET_QUOTA and PROCESS_TERMINATE rights; pid
+    // is valid.
+    // nosemgrep: rust-unsafe-block
     let proc = unsafe { OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, 0, pid) };
     if proc.is_null() {
         warn!("[job] OpenProcess pid={pid} 失败");
         return;
     }
+    // SAFETY: both job_handle and proc are valid handles (non-null).
+    // nosemgrep: rust-unsafe-block
     let ok = unsafe { AssignProcessToJobObject(job_handle, proc) };
     if ok == 0 {
         warn!("[job] AssignProcessToJobObject pid={pid} 失败");
     } else {
         info!("[job] pid={pid} 已加入 Job Object");
     }
+    // SAFETY: proc handle is valid (non-null).
+    // nosemgrep: rust-unsafe-block
     unsafe { CloseHandle(proc) };
 }
 
@@ -1291,6 +1301,8 @@ pub fn run() {
     let _ = env_logger::try_init();
     // Build up managed state. WinJob is Windows-only so we must break the
     // method chain to apply it conditionally with #[cfg(windows)].
+    // TODO(#51): refactor to avoid cfg-dependent mut
+    #[cfg_attr(not(windows), allow(unused_mut))]
     let mut builder = tauri::Builder::default()
         .manage(GidMap(Mutex::new(HashMap::new())))
         .manage(PollStops(Mutex::new(HashMap::new())))
@@ -1328,7 +1340,7 @@ pub fn run() {
                     *app.handle().state::<WinJob>().0.lock().unwrap_or_else(|e| e.into_inner()) = h;
                     info!("[job] Windows Job Object 创建成功 (kill-on-close 已启用)");
                 },
-                None => warn!("[job] Windows Job Object 创建失败，子进程将不受 Job 约束"),
+                None => warn!("[job] Windows Job Object 创建失败，子进程将不受 Job 约束")
             }
 
             let handle = app.handle().clone();
@@ -1371,6 +1383,8 @@ pub fn run() {
                     // Drain stdout/stderr to keep the pipe alive.
                     // aria2c uses --quiet=true so output is negligible, but dropping
                     // the receiver end prematurely can cause broken-pipe issues.
+                    // TODO(#51): extract drain logic to standalone fn
+                    #[allow(clippy::excessive_nesting)]
                     tauri::async_runtime::spawn(async move {
                         let mut rx = rx;
                         while rx.recv().await.is_some() {}
@@ -1378,9 +1392,8 @@ pub fn run() {
 
                     #[cfg(windows)]
                     {
-                        let job_val = *handle
-                            .state::<WinJob>()
-                            .0.lock().unwrap_or_else(|e| e.into_inner());
+                        let job_val =
+                            *handle.state::<WinJob>().0.lock().unwrap_or_else(|e| e.into_inner());
                         if job_val != 0 {
                             win_assign_pid_to_job(job_val, child.pid());
                         }
