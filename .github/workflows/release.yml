@@ -94,7 +94,7 @@ jobs:
 
       # ── 6. Cargo cache ───────────────────────────────────────────────────
       - name: Cache Cargo registry & target
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
