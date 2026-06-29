@@ -24,7 +24,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "@commitlint/types": "^21.0.1",
+    "@commitlint/types": "^21.1.0",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
