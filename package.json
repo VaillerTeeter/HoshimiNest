@@ -20,7 +20,7 @@
     "animal-island-ui": "^1.1.1",
     "bangumi-api-client": "^2026.6.14",
     "classnames": "^2.5.1",
-    "react": "^19.1.0",
+    "react": "^19.2.8",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
