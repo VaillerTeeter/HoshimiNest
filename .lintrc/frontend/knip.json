@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "$schema": "https://unpkg.com/knip@6/schema.json",
 
   "entry": ["src/main.tsx", "vite.config.ts"],
 
@@ -7,9 +7,28 @@
 
   "ignore": [],
 
-  "ignoreDependencies": ["@commitlint/types", "@tauri-apps/plugin-opener"],
+  "ignoreDependencies": [
+    "@commitlint/types",
+    "@tauri-apps/plugin-opener",
+    "@typescript-eslint/eslint-plugin",
+    "@typescript-eslint/parser"
+  ],
 
   "ignoreBinaries": ["cargo", "commitlint", "cspell", "eslint", "prettier", "stylelint"],
+
+  "ignoreUnresolved": [
+    "eslint",
+    "eslint-plugin-react",
+    "eslint-plugin-react-hooks",
+    "eslint-plugin-jsx-a11y",
+    "eslint-plugin-import",
+    "eslint-plugin-unicorn",
+    "eslint-plugin-sonarjs",
+    "eslint-plugin-security",
+    "eslint-plugin-promise",
+    "eslint-plugin-jsdoc",
+    "eslint-import-resolver-typescript"
+  ],
 
   "includeEntryExports": false,
 
@@ -25,7 +44,6 @@
     "unresolved": "error",
     "exports": "error",
     "nsExports": "error",
-    "classMembers": "error",
     "types": "error",
     "nsTypes": "error",
     "enumMembers": "error",

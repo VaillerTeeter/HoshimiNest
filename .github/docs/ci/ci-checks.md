@@ -288,7 +288,7 @@
 
 ## Dead Code Detection
 
-**工具**：[Knip](https://knip.dev/) 5.38.0
+**工具**：[Knip](https://knip.dev/) 6.32.2
 **配置**：[.lintrc/frontend/knip.json](../../../.lintrc/frontend/knip.json)
 
 - **入口**：`src/main.tsx`、`vite.config.ts`，从入口追溯可达性
