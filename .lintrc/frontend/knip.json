@@ -7,9 +7,28 @@
 
   "ignore": [],
 
-  "ignoreDependencies": ["@commitlint/types", "@tauri-apps/plugin-opener"],
+  "ignoreDependencies": [
+    "@commitlint/types",
+    "@tauri-apps/plugin-opener",
+    "@typescript-eslint/eslint-plugin",
+    "@typescript-eslint/parser"
+  ],
 
   "ignoreBinaries": ["cargo", "commitlint", "cspell", "eslint", "prettier", "stylelint"],
+
+  "ignoreUnresolved": [
+    "eslint",
+    "eslint-plugin-react",
+    "eslint-plugin-react-hooks",
+    "eslint-plugin-jsx-a11y",
+    "eslint-plugin-import",
+    "eslint-plugin-unicorn",
+    "eslint-plugin-sonarjs",
+    "eslint-plugin-security",
+    "eslint-plugin-promise",
+    "eslint-plugin-jsdoc",
+    "eslint-import-resolver-typescript"
+  ],
 
   "includeEntryExports": false,
 
