@@ -2,7 +2,7 @@
   // 显式声明远程 JSON Schema，避免 VS Code JSON 语言服务器报"不受信任"警告
   "json.schemas": [
     {
-      "url": "https://unpkg.com/knip@5/schema.json",
+      "url": "https://unpkg.com/knip@6/schema.json",
       "fileMatch": [".lintrc/frontend/knip.json"]
     },
     {
