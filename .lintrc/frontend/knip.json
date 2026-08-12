@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "$schema": "https://unpkg.com/knip@6/schema.json",
 
   "entry": ["src/main.tsx", "vite.config.ts"],
 
@@ -25,7 +25,6 @@
     "unresolved": "error",
     "exports": "error",
     "nsExports": "error",
-    "classMembers": "error",
     "types": "error",
     "nsTypes": "error",
     "enumMembers": "error",

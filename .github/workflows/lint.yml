@@ -402,13 +402,13 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "22"
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
       - name: Install knip
-        run: npm install -g knip@5.38.0
+        run: npm install -g knip@6.32.2
 
       - name: Run knip
         run: |
