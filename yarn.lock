@@ -257,10 +257,12 @@
   dependencies:
     "@rolldown/pluginutils" "^1.0.1"
 
-animal-island-ui@^1.7.0:
-  version "1.7.0"
-  resolved "https://registry.yarnpkg.com/animal-island-ui/-/animal-island-ui-1.7.0.tgz#0356a598fec0ff6b38ef2afe85014badbb42abc7"
-  integrity sha512-KVqjaZBHQuoEYjswuRfnyB0aLQfnUM6H0tJqeXXrzwL1UQI0qXjDMNPEwIrUb8cyIt9nwwIW1NAxEiBwMVbStw==
+animal-island-ui@^2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/animal-island-ui/-/animal-island-ui-2.1.1.tgz#e6fe941cc2cd330ef051732dd62f80eb8c2cff95"
+  integrity sha512-PLM51gEdiG13BIQOQ7yN26ul2O977iEjdh+vwKD8sa0q96qUWhZYvcVCqMbTA5SVZ8rlY5iCv5PLvjFO7L7aEA==
+  dependencies:
+    naive-icons "^1.2.0"
 
 bangumi-api-client@^2026.6.14:
   version "2026.6.14"
@@ -378,6 +380,11 @@ meow@^14.0.0:
   version "14.1.0"
   resolved "https://registry.yarnpkg.com/meow/-/meow-14.1.0.tgz#3cd2d16ad534829ab12fcb5010fc2fdb89facd31"
   integrity sha512-EDYo6VlmtnumlcBCbh1gLJ//9jvM/ndXHfVXIFrZVr6fGcwTUyCTFNTLCKuY3ffbK8L/+3Mzqnd58RojiZqHVw==
+
+naive-icons@^1.2.0:
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/naive-icons/-/naive-icons-1.6.0.tgz#4793a15dc028ea232d17454b0a211f9fdd5405dd"
+  integrity sha512-wKWV2K2s8OFdaZJ6rQdxbBZnQpS5cW5yHw+UPcoooHzG/dAvrYGm9mfMHXGqVBhyBWBCqQaGcbZMQpK2SrJZJQ==
 
 nanoid@^3.3.17:
   version "3.3.18"
