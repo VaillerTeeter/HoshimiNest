@@ -20,13 +20,13 @@
     "animal-island-ui": "^1.7.0",
     "bangumi-api-client": "^2026.6.14",
     "classnames": "^2.5.1",
-    "react": "^19.2.8",
+    "react": "^19.3.0",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@commitlint/types": "^21.2.0",
     "@tauri-apps/cli": "^2",
-    "@types/react": "^19.2.18",
+    "@types/react": "^19.3.0",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.1",
     "typescript": "~6.0.3",
