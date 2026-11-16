@@ -114,7 +114,7 @@ jobs:
 
       # ── 8. 编译 + 打包 ───────────────────────────────────────────────────
       - name: Build Tauri (compile + bundle)
-        run: yarn tauri build
+        run: yarn tauri:build
 
       # ── 9. 创建 GitHub Release 并上传产物 ────────────────────────────────
       - name: Create GitHub Release

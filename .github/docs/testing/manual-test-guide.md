@@ -6,27 +6,28 @@
 
 ## 测试前准备：清除应用数据
 
-为确保测试从干净状态开始，测试前需删除应用持久化数据（追番收藏、下载记录等 localStorage 数据）。Tauri 应用的 WebView2 数据存储在：
+为确保测试从干净状态开始，测试前需删除应用持久化数据。dev 模式（`yarn tauri:dev`）使用独立 identifier，数据目录与正式版隔离，位于：
 
 ```text
-%LOCALAPPDATA%\com.vaciller.hoshiminest.dev
+%APPDATA%\com.vaciller.hoshiminest.dev        # 配置 / Bangumi 登录凭据（DPAPI 密文）
+%LOCALAPPDATA%\com.vaciller.hoshiminest.dev   # WebView2 数据（localStorage：追番收藏、下载记录、书签）
 ```
 
 操作步骤：
 
 1. 关闭 HoshimiNest 应用
-2. 按 `Win + R` → 输入 `%LOCALAPPDATA%\com.vaciller.hoshiminest.dev` → 回车
-3. 删除该目录下所有文件和子目录
+2. 按 `Win + R` → 分别输入上面两个路径 → 回车
+3. 删除这两个目录下的所有文件和子目录
 4. 重新执行 `yarn tauri:dev` 启动应用，终端输出如下：
 
 ```text
 PS <project-root>> yarn tauri:dev
 yarn run v1.22.22
-$ tauri dev
+$ tauri dev --config src-tauri/tauri.dev.conf.json
      Running BeforeDevCommand (`yarn dev`)
 $ vite
 
-  VITE v7.3.3  ready in 221 ms
+  VITE v8.3.4  ready in 221 ms
 
   ➜  Local:   http://localhost:1520/
      Running DevCommand (`cargo  run --no-default-features --color always --`)

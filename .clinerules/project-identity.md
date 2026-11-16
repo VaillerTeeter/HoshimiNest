@@ -101,14 +101,15 @@ NEVER suggest re-installing these — already in `package.json`:
 ## Dev Commands
 
 ```bash
-yarn dev          # Vite dev server (frontend only, port 1520)
-yarn tauri dev    # full Tauri app in dev mode
-yarn build        # TypeScript check + Vite build
-yarn tauri build  # production Tauri bundle
-yarn rustcheck    # cargo check (Rust compilation check only)
+yarn dev           # Vite dev server (frontend only, port 1520)
+yarn tauri:dev     # full Tauri app in dev mode (dev identifier, isolated data)
+yarn build         # TypeScript check + Vite build
+yarn tauri:build   # production Tauri bundle
+yarn rustcheck     # cargo check (Rust compilation check only)
 ```
 
 ## Window Config
 
 - Window: 1360×820, non-resizable, non-maximizable, frameless (custom titlebar)
 - App identifier: `HoshimiNest`
+- Dev identifier: `com.vaciller.hoshiminest.dev` (overridden by `src-tauri/tauri.dev.conf.json` in `yarn tauri:dev`, keeps dev data isolated from production)

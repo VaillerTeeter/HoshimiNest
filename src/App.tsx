@@ -4,7 +4,7 @@ import { message } from '@tauri-apps/plugin-dialog';
 import { Button, Icon, Loading, type IconName } from 'animal-island-ui';
 import { useState, useRef, useEffect, useCallback, type MutableRefObject } from 'react';
 
-import './App.css';
+import AccountPanel from './components/AccountPanel';
 import BacklogPage from './pages/BacklogPage';
 import DownloadPage from './pages/DownloadPage';
 import FinishedPage from './pages/FinishedPage';
@@ -12,7 +12,11 @@ import QueryPage from './pages/QueryPage';
 import SearchPage from './pages/SearchPage';
 import TracksPage from './pages/TracksPage';
 import WatchingPage from './pages/WatchingPage';
+import { relayImage } from './relay';
+import { AuthProvider, useAuth } from './store/authStore';
 import { DownloadProvider } from './store/downloadStore';
+
+import './App.css';
 
 const appWindow = getCurrentWindow();
 
@@ -172,6 +176,83 @@ function TopbarTitle({ currentLabel, page, queryTitleParts }: TopbarTitleProps):
   );
 }
 
+/**
+ * 顶栏最左侧的账号头像圆框。
+ *
+ * 未登录显示人像占位，登录后显示 Bangumi 头像 + 绿色外环；点击展开
+ * {@link AccountPanel}（未登录为登录表单，已登录为个人信息 + 退出）。
+ *
+ * @returns 圆形头像按钮 + 账号弹框
+ */
+function TopbarUser(): React.JSX.Element {
+  const [accountOpen, setAccountOpen] = useState(false);
+  const avatarRef = useRef<HTMLButtonElement | null>(null);
+  const { profile, submitting, refreshing, error, login, logout, refresh } = useAuth();
+
+  // 打开面板时刷新一次个人信息：网页改了头像/昵称后无需重启即可同步
+  useEffect(() => {
+    if (accountOpen) {
+      void refresh();
+    }
+  }, [accountOpen, refresh]);
+
+  const handleAccountClose = useCallback((): void => {
+    setAccountOpen(false);
+  }, []);
+
+  const handleLogin = useCallback(
+    (token: string): void => {
+      void login(token);
+    },
+    [login],
+  );
+
+  const handleLogout = useCallback((): void => {
+    void logout();
+  }, [logout]);
+
+  return (
+    <div className="topbar-user">
+      <button
+        ref={avatarRef}
+        type="button"
+        className={`topbar-avatar${profile === null ? '' : ' topbar-avatar--logged-in'}`}
+        title={profile === null ? '账号（未登录）' : profile.nickname}
+        aria-label="账号"
+        aria-haspopup="dialog"
+        aria-expanded={accountOpen}
+        onClick={() => {
+          setAccountOpen((prev) => !prev);
+        }}
+      >
+        {profile !== null && profile.avatarUrl !== '' ? (
+          <img
+            className="topbar-avatar__img"
+            src={relayImage(profile.avatarUrl)}
+            alt={profile.nickname}
+          />
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
+            <circle cx="256" cy="176" r="96" />
+            <path d="M96 448c0-88 72-144 160-144s160 56 160 144z" />
+          </svg>
+        )}
+      </button>
+      <AccountPanel
+        open={accountOpen}
+        anchorRef={avatarRef}
+        profile={profile}
+        submitting={submitting}
+        refreshing={refreshing}
+        error={error}
+        onSubmit={handleLogin}
+        onLogout={handleLogout}
+        onClose={handleAccountClose}
+      />
+    </div>
+  );
+}
+
 function WindowControls(): React.JSX.Element {
   return (
     <div className="topbar-controls">
@@ -202,7 +283,9 @@ function WindowControls(): React.JSX.Element {
 export default function App(): React.JSX.Element {
   return (
     <DownloadProvider>
-      <AppInner />
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
     </DownloadProvider>
   );
 }
@@ -260,6 +343,7 @@ function AppInner(): React.JSX.Element {
       )}
       <div className="app-shell">
         <header className="topbar" data-tauri-drag-region>
+          <TopbarUser />
           <WindowControls />
           <TopbarTitle currentLabel={currentLabel} page={page} queryTitleParts={queryTitleParts} />
         </header>

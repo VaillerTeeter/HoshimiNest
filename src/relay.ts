@@ -1,5 +1,7 @@
 import { createBangumiClient } from 'bangumi-api-client';
 
+import { USER_AGENT } from './appMeta';
+
 /**
  * Relay site origin (path-prefix reverse proxy, see server net.conf):
  *   <origin>/bgm/  -> https://api.bgm.tv/
@@ -51,8 +53,74 @@ export function relayImage(url: string): string {
   return url.replace(/^https?:\/\/lain\.bgm\.tv\//, `${RELAY_ORIGIN}/lain/`);
 }
 
-/** Shared Bangumi API client (single instance for the whole app) */
+/**
+ * Shared Bangumi API client (single instance for the whole app).
+ *
+ * The Authorization header is switched at runtime by `applyBgmToken`, so every
+ * request sent through this instance reflects the current login state.
+ */
 export const bgm = createBangumiClient({
-  userAgent: 'HoshimiNest/0.1.0',
+  userAgent: USER_AGENT,
   baseUrl: BGM_BASE_URL,
 });
+
+/**
+ * Set or clear the Authorization header of the shared client.
+ *
+ * @param token - Access token; pass null to clear it (anonymous requests)
+ * @returns Nothing
+ */
+export function applyBgmToken(token: string | null): void {
+  bgm._client.setConfig({
+    headers: {
+      Authorization: token === null || token === '' ? null : `Bearer ${token}`,
+    },
+  });
+}
+
+/** Minimal (non-sensitive) profile of the logged-in Bangumi user. */
+export interface BgmProfile {
+  /** Bangumi user id */
+  id: number;
+  /** Unique username */
+  username: string;
+  /** Nickname shown in the UI */
+  nickname: string;
+  /** Large avatar url (lain.bgm.tv — rewrite with `relayImage` before render) */
+  avatarUrl: string;
+}
+
+/** Result of an access-token probe. */
+export type ProfileProbe =
+  { kind: 'ok'; profile: BgmProfile } | { kind: 'invalid' } | { kind: 'error'; detail: string };
+
+/**
+ * Validate an access token with a throw-away client (does not touch `bgm`).
+ *
+ * @param token - Access token to validate
+ * @returns Probe result; `ok` carries the user profile
+ */
+export async function probeToken(token: string): Promise<ProfileProbe> {
+  const client = createBangumiClient({ userAgent: USER_AGENT, baseUrl: BGM_BASE_URL, token });
+  try {
+    const res = await client.users.getMyself();
+    if (res.data === undefined) {
+      if (res.response.status === 401) {
+        return { kind: 'invalid' };
+      }
+      return { kind: 'error', detail: `HTTP ${String(res.response.status)}` };
+    }
+    return {
+      kind: 'ok',
+      profile: {
+        id: res.data.id,
+        username: res.data.username,
+        nickname: res.data.nickname,
+        avatarUrl: res.data.avatar.large,
+      },
+    };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'network error';
+    return { kind: 'error', detail };
+  }
+}

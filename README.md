@@ -211,7 +211,9 @@ yarn install
 
 ```bash
 # Windows PowerShell — 启动完整 Tauri 桌面窗口（热重载）
-# 使用 --config 加载 dev identifier，与生产安装数据隔离（%LOCALAPPDATA%\com.vaciller.hoshiminest.dev）
+# 使用 --config 加载 dev identifier，与生产数据隔离：
+#   %APPDATA%\com.vaciller.hoshiminest.dev        （配置 / Bangumi 登录凭据）
+#   %LOCALAPPDATA%\com.vaciller.hoshiminest.dev   （WebView2 / localStorage）
 yarn tauri:dev
 ```
 
