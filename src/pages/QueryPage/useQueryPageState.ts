@@ -79,6 +79,100 @@ async function fetchMonth(
   return collected;
 }
 
+// -- season search (POST /v0/search/subjects) --------------------------------
+
+/** Server-side page cap for POST /v0/search/subjects (larger values are ignored). */
+const SEARCH_PAGE_SIZE = 20;
+
+/** 4 parallel pages measured fastest (12 pages serial: 3.6 s, 3 batches of 4: ~1.05 s). */
+const SEARCH_CONCURRENCY = 4;
+
+/** Season results are stable enough to keep them for the whole session. */
+const seasonCache = new Map<string, Subject[]>();
+const SEASON_CACHE_LIMIT = 12;
+
+/** Map a season to the [inclusive, exclusive) air_date range used by the search api. */
+function seasonDateRange(yearNum: number, season: SeasonKey): [string, string] {
+  const months = seasonToMonths(season);
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  const endMonth = months[2] + 1;
+  const endYear = endMonth > 12 ? yearNum + 1 : yearNum;
+  return [
+    `${String(yearNum)}-${pad(months[0])}-01`,
+    `${String(endYear)}-${pad(endMonth > 12 ? 1 : endMonth)}-01`,
+  ];
+}
+
+function sortByDate(subjects: Subject[]): Subject[] {
+  return [...subjects].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+}
+
+function rememberSeason(key: string, subjects: Subject[]): void {
+  seasonCache.delete(key);
+  seasonCache.set(key, subjects);
+  if (seasonCache.size > SEASON_CACHE_LIMIT) {
+    const [oldest] = seasonCache.keys();
+    if (oldest !== undefined) {
+      seasonCache.delete(oldest);
+    }
+  }
+}
+
+/**
+ * Fetch a whole season with one air_date range query instead of three
+ * month-scoped browse queries: the browse endpoint needs ~3.8 s per request,
+ * the search endpoint ~0.5 s.
+ *
+ * `onPartial` fires after every batch so the list renders progressively.
+ */
+async function fetchSeason(
+  yearNum: number,
+  season: SeasonKey,
+  isCancelled: () => boolean,
+  onPartial: (subjects: Subject[]) => void,
+): Promise<Subject[]> {
+  const [from, to] = seasonDateRange(yearNum, season);
+  const collected: Subject[] = [];
+  const seen = new Set<number>();
+
+  const loadPage = async (offset: number): Promise<number> => {
+    const res = await bgm.subjects.searchSubjects({
+      keyword: '',
+      filter: { type: [2], air_date: [`>=${from}`, `<${to}`] },
+      limit: SEARCH_PAGE_SIZE,
+      offset,
+    });
+    if (res.data === undefined) {
+      throw new Error('searchSubjects returned no data');
+    }
+    const fresh = res.data.data.filter((item) => !seen.has(item.id));
+    for (const item of fresh) {
+      seen.add(item.id);
+    }
+    collected.push(...fresh);
+    return res.data.total;
+  };
+
+  const total = await loadPage(0);
+  onPartial(sortByDate(collected));
+
+  const offsets: number[] = [];
+  for (let offset = SEARCH_PAGE_SIZE; offset < total; offset += SEARCH_PAGE_SIZE) {
+    offsets.push(offset);
+  }
+
+  for (let index = 0; index < offsets.length; index += SEARCH_CONCURRENCY) {
+    if (isCancelled()) {
+      break;
+    }
+    const batch = offsets.slice(index, index + SEARCH_CONCURRENCY);
+    await Promise.all(batch.map((offset) => loadPage(offset)));
+    onPartial(sortByDate(collected));
+  }
+
+  return sortByDate(collected);
+}
+
 // ── useYearSeason ────────────────────────────────────────────────────────────
 
 interface YearSeasonState {
@@ -148,18 +242,38 @@ export function useQuerySearch(
     }
     try {
       const yearNum = Number(year);
-      const months = seasonToMonths(season);
-      const allResults: Subject[] = [];
-      for (const month of months) {
-        if (cancelledRef.cancelled) {
-          break;
+      const isCancelled = (): boolean => cancelledRef.cancelled;
+      const cacheKey = `${String(yearNum)}-${season}`;
+      const cached = seasonCache.get(cacheKey);
+      if (cached !== undefined) {
+        setResults(cached);
+      } else {
+        try {
+          const seasonResults = await fetchSeason(yearNum, season, isCancelled, (partial) => {
+            if (!cancelledRef.cancelled) {
+              setResults(partial);
+            }
+          });
+          if (!cancelledRef.cancelled) {
+            rememberSeason(cacheKey, seasonResults);
+          }
+        } catch {
+          // Fallback: per-month browsing (slower, but keeps the page usable).
+          const fallback: Subject[] = [];
+          for (const month of seasonToMonths(season)) {
+            if (cancelledRef.cancelled) {
+              break;
+            }
+            const monthResults = await fetchMonth(yearNum, month, isCancelled);
+            fallback.push(...monthResults);
+            if (!cancelledRef.cancelled) {
+              setResults(sortByDate(fallback));
+            }
+          }
+          if (!cancelledRef.cancelled) {
+            rememberSeason(cacheKey, fallback);
+          }
         }
-        const monthResults = await fetchMonth(yearNum, month, () => cancelledRef.cancelled);
-        allResults.push(...monthResults);
-      }
-      if (!cancelledRef.cancelled) {
-        allResults.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
-        setResults(allResults);
       }
     } catch {
       if (!cancelledRef.cancelled) {
