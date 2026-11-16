@@ -1,4 +1,4 @@
-import { type Subject } from 'bangumi-api-client';
+import type { Subject } from 'bangumi-api-client';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 
 import { bgm } from '../../relay';
@@ -91,7 +91,13 @@ const SEARCH_CONCURRENCY = 4;
 const seasonCache = new Map<string, Subject[]>();
 const SEASON_CACHE_LIMIT = 12;
 
-/** Map a season to the [inclusive, exclusive) air_date range used by the search api. */
+/**
+ * Map a season to the [inclusive, exclusive) air_date range used by the search api.
+ *
+ * @param yearNum - Year of the season
+ * @param season - Season key
+ * @returns Start and end date strings, e.g. ['2026-01-01', '2026-04-01']
+ */
 function seasonDateRange(yearNum: number, season: SeasonKey): [string, string] {
   const months = seasonToMonths(season);
   const pad = (value: number): string => String(value).padStart(2, '0');
@@ -124,6 +130,12 @@ function rememberSeason(key: string, subjects: Subject[]): void {
  * the search endpoint ~0.5 s.
  *
  * `onPartial` fires after every batch so the list renders progressively.
+ *
+ * @param yearNum - Year of the season
+ * @param season - Season key
+ * @param isCancelled - Callback returning true when the request was cancelled
+ * @param onPartial - Callback invoked with the sorted partial result list
+ * @returns All subjects of the season, sorted by air date
  */
 async function fetchSeason(
   yearNum: number,
@@ -171,6 +183,62 @@ async function fetchSeason(
   }
 
   return sortByDate(collected);
+}
+
+/**
+ * Fallback loader: browse one page per month (slower, but battle tested).
+ *
+ * @param yearNum - Year of the season
+ * @param season - Season key
+ * @param isCancelled - Callback returning true when the request was cancelled
+ * @param onPartial - Callback invoked with the sorted partial result list
+ * @returns All subjects of the season, sorted by air date
+ */
+async function fetchSeasonByMonth(
+  yearNum: number,
+  season: SeasonKey,
+  isCancelled: () => boolean,
+  onPartial: (subjects: Subject[]) => void,
+): Promise<Subject[]> {
+  const collected: Subject[] = [];
+  for (const month of seasonToMonths(season)) {
+    if (isCancelled()) {
+      break;
+    }
+    const monthResults = await fetchMonth(yearNum, month, isCancelled);
+    collected.push(...monthResults);
+    onPartial(sortByDate(collected));
+  }
+  return sortByDate(collected);
+}
+
+/**
+ * Load one season and cache it, falling back to per-month browsing on failure.
+ *
+ * @param yearNum - Year of the season
+ * @param season - Season key
+ * @param cacheKey - Cache key of the season
+ * @param isCancelled - Callback returning true when the request was cancelled
+ * @param onPartial - Callback invoked with the sorted partial result list
+ * @returns Nothing - results are delivered through the onPartial callback
+ */
+async function loadSeason(
+  yearNum: number,
+  season: SeasonKey,
+  cacheKey: string,
+  isCancelled: () => boolean,
+  onPartial: (subjects: Subject[]) => void,
+): Promise<void> {
+  let subjects: Subject[];
+  try {
+    subjects = await fetchSeason(yearNum, season, isCancelled, onPartial);
+  } catch {
+    // The search api is unavailable; fall back to per-month browsing.
+    subjects = await fetchSeasonByMonth(yearNum, season, isCancelled, onPartial);
+  }
+  if (!isCancelled()) {
+    rememberSeason(cacheKey, subjects);
+  }
 }
 
 // ── useYearSeason ────────────────────────────────────────────────────────────
@@ -245,35 +313,15 @@ export function useQuerySearch(
       const isCancelled = (): boolean => cancelledRef.cancelled;
       const cacheKey = `${String(yearNum)}-${season}`;
       const cached = seasonCache.get(cacheKey);
-      if (cached !== undefined) {
-        setResults(cached);
-      } else {
-        try {
-          const seasonResults = await fetchSeason(yearNum, season, isCancelled, (partial) => {
-            if (!cancelledRef.cancelled) {
-              setResults(partial);
-            }
-          });
-          if (!cancelledRef.cancelled) {
-            rememberSeason(cacheKey, seasonResults);
-          }
-        } catch {
-          // Fallback: per-month browsing (slower, but keeps the page usable).
-          const fallback: Subject[] = [];
-          for (const month of seasonToMonths(season)) {
-            if (cancelledRef.cancelled) {
-              break;
-            }
-            const monthResults = await fetchMonth(yearNum, month, isCancelled);
-            fallback.push(...monthResults);
-            if (!cancelledRef.cancelled) {
-              setResults(sortByDate(fallback));
-            }
-          }
-          if (!cancelledRef.cancelled) {
-            rememberSeason(cacheKey, fallback);
-          }
+      const onPartial = (partial: Subject[]): void => {
+        if (!cancelledRef.cancelled) {
+          setResults(partial);
         }
+      };
+      if (cached === undefined) {
+        await loadSeason(yearNum, season, cacheKey, isCancelled, onPartial);
+      } else {
+        setResults(cached);
       }
     } catch {
       if (!cancelledRef.cancelled) {

@@ -1,8 +1,4 @@
-import {
-  type Episode,
-  type RelatedCharacter,
-  type RelatedPerson,
-} from 'bangumi-api-client';
+import type { Episode, RelatedCharacter, RelatedPerson } from 'bangumi-api-client';
 import { useEffect, useState } from 'react';
 
 import { bgm } from '../../relay';

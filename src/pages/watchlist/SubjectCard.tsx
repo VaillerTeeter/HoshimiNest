@@ -12,11 +12,7 @@ export function SubjectCard({ item, onClick }: SubjectCardProps): React.JSX.Elem
   return (
     <button type="button" className="finished-card" onClick={onClick}>
       <div className="finished-card-cover">
-        <img
-          src={cover}
-          alt={item.name_cn === '' ? item.name : item.name_cn}
-          loading="lazy"
-        />
+        <img src={cover} alt={item.name_cn === '' ? item.name : item.name_cn} loading="lazy" />
       </div>
       <div className="finished-card-info">
         <span className="finished-card-title">
