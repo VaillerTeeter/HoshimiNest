@@ -1,5 +1,7 @@
 import type { Subject } from 'bangumi-api-client';
 
+import { relayImage } from '../../relay';
+
 interface ResultsListProps {
   results: Subject[];
   selectedId: number | null;
@@ -27,7 +29,7 @@ export function ResultsList({
         >
           <img
             className="query-result-img"
-            src={item.images.medium}
+            src={relayImage(item.images.medium)}
             alt={item.name_cn === '' ? item.name : item.name_cn}
             loading="lazy"
           />

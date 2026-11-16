@@ -1,5 +1,7 @@
 import type { Subject, Episode } from 'bangumi-api-client';
 
+import { relayImage } from '../../relay';
+
 const PLATFORMS = ['TV', 'WEB', 'OVA', '剧场版', '动态漫画', '其他'];
 const SOURCES = ['原创', '漫画改', '游戏改', '小说改', '动画改', '影视改'];
 const GENRES = [
@@ -102,7 +104,7 @@ export function isEpAired(
 }
 
 export function pickImage(large: string, medium: string): string {
-  return large.length > 0 ? large : medium;
+  return relayImage(large.length > 0 ? large : medium);
 }
 
 export function pickName(nameCn: string, name: string): string {

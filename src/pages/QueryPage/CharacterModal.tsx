@@ -1,6 +1,8 @@
 import { Modal } from 'animal-island-ui';
 import type { RelatedCharacter } from 'bangumi-api-client';
 
+import { relayImage } from '../../relay';
+
 interface CharacterModalProps {
   open: boolean;
   loading: boolean;
@@ -32,7 +34,11 @@ export function CharacterModal({
             {characters.map((ch) => (
               <div key={ch.id} className="modal-character-card">
                 {ch.images?.medium !== undefined && ch.images.medium !== '' && (
-                  <img className="modal-character-img" src={ch.images.medium} alt={ch.name} />
+                  <img
+                    className="modal-character-img"
+                    src={relayImage(ch.images.medium)}
+                    alt={ch.name}
+                  />
                 )}
                 <div className="modal-character-info">
                   <span className="modal-character-name">{ch.name}</span>
