@@ -1,6 +1,4 @@
-import { createBangumiClient } from 'bangumi-api-client';
-
-export const bgm = createBangumiClient({ userAgent: 'HoshimiNest/0.1.0' });
+export { bgm } from '../../relay';
 
 const _today = new Date();
 export const todayStr = `${String(_today.getFullYear())}-${String(_today.getMonth() + 1).padStart(2, '0')}-${String(_today.getDate()).padStart(2, '0')}`;

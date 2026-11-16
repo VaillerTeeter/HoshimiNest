@@ -1,12 +1,11 @@
 import {
-  createBangumiClient,
   type Episode,
   type RelatedCharacter,
   type RelatedPerson,
 } from 'bangumi-api-client';
 import { useEffect, useState } from 'react';
 
-const bgm = createBangumiClient({ userAgent: 'HoshimiNest/0.1.0' });
+import { bgm } from '../../relay';
 
 interface EpisodesResult {
   episodes: Episode[];

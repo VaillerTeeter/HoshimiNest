@@ -1071,6 +1071,7 @@ async fn fetch_html(url: String) -> Result<String, String> {
              AppleWebKit/537.36 (KHTML, like Gecko) \
              Chrome/124.0.0.0 Safari/537.36"
         )
+        .timeout(Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;
     client

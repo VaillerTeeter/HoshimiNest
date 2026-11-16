@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useState, type KeyboardEvent } from 'react';
 
+import { NYAA_SEARCH_URL } from '../../relay';
 import { loadEntriesByStatus } from '../../store/watchStore';
 
 import type { LogicOp, NyaaResult, SearchTerm, UseSearchPageResult } from './types';
@@ -16,7 +17,7 @@ function parseNyaaHtml(html: string): NyaaResult[] {
     if (tds.length < 8) {
       return;
     }
-    const nameEl = tds[1].querySelector('a[href^="/view/"]:not([href*="#"])');
+    const nameEl = tds[1].querySelector('a[href*="/view/"]:not([href*="#"])');
     const name = nameEl?.textContent.trim() ?? '';
     const magnetEl = tds[2].querySelector('a[href^="magnet:"]');
     const magnet = magnetEl?.getAttribute('href') ?? '';
@@ -258,7 +259,7 @@ function useSearchActions(
     setSearchError('');
     setSearchResults([]);
     try {
-      const url = `https://nyaa.si/?q=${encodeURIComponent(q)}`;
+      const url = `${NYAA_SEARCH_URL}?q=${encodeURIComponent(q)}`;
       const html = await invoke<string>('fetch_html', { url });
       const results = parseNyaaHtml(html);
       if (results.length === 0) {
