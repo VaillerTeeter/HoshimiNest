@@ -315,10 +315,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.x"
+          python-version: "3.13"
 
       - name: Install Semgrep
-        run: pip install semgrep
+        run: pip install semgrep==1.185.0
 
       - name: Run Semgrep
         run: |
@@ -328,6 +328,9 @@ jobs:
             --config p/secrets \
             --error \
             --no-rewrite-rule-ids \
+            --max-memory 2000 \
+            --jobs 1 \
+            --timeout 300 \
             src/ src-tauri/src/
 
   # ============================================================

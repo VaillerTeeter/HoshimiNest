@@ -1,6 +1,7 @@
 import { Divider } from 'animal-island-ui';
 import type { Episode, RelatedCharacter, RelatedPerson, Subject } from 'bangumi-api-client';
 
+import { relayImage } from '../../relay';
 import type { WatchStatus } from '../../store/watchStore';
 
 import { EpisodePills } from './EpisodePills';
@@ -108,8 +109,9 @@ function ListDetailPanel(props: ListDetailPanelProps): React.JSX.Element {
   } = props;
   const currentStatus: WatchStatus | '无状态' = watchStatus[selectedItem.id] ?? '无状态';
   const mainTitle = selectedItem.name_cn === '' ? selectedItem.name : selectedItem.name_cn;
-  const coverSrc =
-    selectedItem.images.large === '' ? selectedItem.images.medium : selectedItem.images.large;
+  const coverSrc = relayImage(
+    selectedItem.images.large === '' ? selectedItem.images.medium : selectedItem.images.large,
+  );
 
   return (
     <div className="query-detail">
@@ -356,7 +358,7 @@ function SubjectCardList({
           >
             <img
               className="query-result-img"
-              src={item.images.medium}
+              src={relayImage(item.images.medium)}
               alt={displayName}
               loading="lazy"
             />

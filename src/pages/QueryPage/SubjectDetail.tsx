@@ -1,6 +1,7 @@
 import { Divider } from 'animal-island-ui';
 import type { Episode, Subject } from 'bangumi-api-client';
 
+import { relayImage } from '../../relay';
 import type { WatchStatus } from '../../store/watchStore';
 
 import { AUDIENCES, REGIONS, SOURCES, GENRES, PLATFORMS, todayStr } from './queryHelpers';
@@ -217,7 +218,7 @@ export function SubjectDetail({
   const detailTags = buildDetailTags(item);
   const currentStatus = watchStatus[item.id] ?? '无状态';
   const mainTitle = item.name_cn === '' ? item.name : item.name_cn;
-  const coverSrc = item.images.large === '' ? item.images.medium : item.images.large;
+  const coverSrc = relayImage(item.images.large === '' ? item.images.medium : item.images.large);
   const hasDate = item.date !== undefined && item.date !== '';
   const charLabel = buildCountLabel(charactersLoading, charactersCount);
   const personLabel = buildCountLabel(personsLoading, personsCount);

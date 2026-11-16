@@ -1,6 +1,7 @@
 import { Divider, Modal } from 'animal-island-ui';
 import type { Episode, RelatedCharacter, RelatedPerson, Subject } from 'bangumi-api-client';
 
+import { relayImage } from '../../relay';
 import type { WatchStatus } from '../../store/watchStore';
 
 import { EpisodePills } from './EpisodePills';
@@ -114,8 +115,9 @@ function DetailCore({
   onShowPersons,
 }: DetailCoreProps): React.JSX.Element {
   const title = selectedItem.name_cn === '' ? selectedItem.name : selectedItem.name_cn;
-  const coverSrc =
-    selectedItem.images.large === '' ? selectedItem.images.medium : selectedItem.images.large;
+  const coverSrc = relayImage(
+    selectedItem.images.large === '' ? selectedItem.images.medium : selectedItem.images.large,
+  );
   const currentStatus = watchStatus[selectedItem.id] ?? '无状态';
   const charLabel = buildCountLabel(charactersLoading, characters.length);
   const personLabel = buildCountLabel(personsLoading, persons.length);

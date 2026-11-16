@@ -1,6 +1,8 @@
 import { Modal } from 'animal-island-ui';
 import type { RelatedPerson } from 'bangumi-api-client';
 
+import { relayImage } from '../../relay';
+
 interface PersonModalProps {
   open: boolean;
   loading: boolean;
@@ -32,7 +34,11 @@ export function PersonModal({
             {persons.map((p) => (
               <div key={p.id} className="modal-person-row">
                 {Boolean(p.images?.medium) && (
-                  <img className="modal-person-img" src={p.images?.medium} alt={p.name} />
+                  <img
+                    className="modal-person-img"
+                    src={relayImage(p.images?.medium ?? '')}
+                    alt={p.name}
+                  />
                 )}
                 <div className="modal-person-info">
                   <span className="modal-person-name">{p.name}</span>
