@@ -1,12 +1,12 @@
 ---
-description: "Use when: writing or modifying React components, TypeScript, CSS, or Zustand stores in src/. Covers component patterns, import order, styling, state management, and TypeScript rules."
+description: "Use when: writing or modifying React components, TypeScript, CSS, or shared state in src/. Covers component patterns, import order, styling, state management, and TypeScript rules."
 globs: "src/**"
 alwaysApply: false
 ---
 
 # Frontend Rules
 
-<!-- React / TypeScript / CSS / Zustand 规范，操作 src/ 目录时自动加载 -->
+<!-- React / TypeScript / CSS / 状态管理规范，操作 src/ 目录时自动加载 -->
 
 ## Component Pattern
 
@@ -108,27 +108,41 @@ dl-progress-bar--done    # Modifier with state
 
 ## State Management
 
-Always use Zustand for state management. NEVER introduce Redux, Jotai, MobX, or other state libraries.
+Global state uses React Context + custom hooks (see `src/store/downloadStore.tsx` and `src/store/authStore.tsx`). NEVER introduce Zustand, Redux, Jotai, MobX, or other state libraries.
 
-Place store files in `src/store/`. Name stores in camelCase:
+Place providers/stores in `src/store/`. Name files in camelCase:
 
 ```text
-src/store/watchStore.ts
-src/store/downloadStore.tsx
+src/store/watchStore.ts       # localStorage helpers
+src/store/downloadStore.tsx   # DownloadProvider + useDownload()
+src/store/authStore.tsx       # AuthProvider + useAuth()
 ```
 
-Encapsulate store logic in custom hooks when exposing to components:
+Expose state through a hook wrapping `use(Context)`:
 
 ```tsx
-// src/store/downloadStore.tsx
-export function useDownload() {
-  return useDownloadStore((s) => ({
-    tasks: s.tasks,
-    pauseTask: s.pauseTask,
-    // ...
-  }));
+// src/store/taskStore.tsx
+const TaskContext = createContext<TaskContextValue>({ /* defaults */ });
+
+export function TaskProvider({ children }: { children: ReactNode }): ReactElement {
+  // state + callbacks
+  return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
+}
+
+export function useTasks(): TaskContextValue {
+  return use(TaskContext);
 }
 ```
+
+## Remote Assets & Credentials
+
+Always route Bangumi / Nyaa requests through `src/relay.ts` (`RELAY_ORIGIN` + shared `bgm` client). NEVER hardcode `api.bgm.tv`, `lain.bgm.tv` or `nyaa.si`.
+
+Always render remote images through `relayImage()` — it rewrites `lain.bgm.tv` to the relay and returns an inline placeholder for empty urls.
+
+NEVER store tokens, passwords or other credentials in `localStorage` / `sessionStorage`. Bangumi credentials are persisted by Rust (Windows DPAPI) and read via `invoke('load_bangumi_token')`.
+
+Only non-sensitive profile fields (id / username / nickname / avatarUrl) may be cached in `localStorage`.
 
 ## Pre-existing Dependencies
 
@@ -136,7 +150,7 @@ NEVER suggest installing or re-installing these — already in `package.json`:
 
 - `@tauri-apps/api`, `@tauri-apps/plugin-dialog`, `@tauri-apps/plugin-opener`
 - `animal-island-ui`, `bangumi-api-client`
-- `react`, `react-dom`, `zustand`
+- `react`, `react-dom`
 
 Always invoke Tauri commands via `invoke()` from `@tauri-apps/api/core`. NEVER use other Tauri IPC methods.
 
@@ -151,6 +165,7 @@ void invoke('reveal_in_folder', { path: task.saveDir });
 |Type|Convention|Example|
 |----|----------|-------|
 |Page component|PascalCase|`DownloadPage.tsx`|
+|Shared component|PascalCase|`AccountPanel.tsx`|
 |Store|camelCase|`watchStore.ts`|
 |Styles (global)|kebab-case|`theme.css`, `fonts.css`|
 |Styles (component)|PascalCase + `.css`|`DownloadPage.css`|

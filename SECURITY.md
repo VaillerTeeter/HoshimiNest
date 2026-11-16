@@ -24,3 +24,12 @@
 5. 如有可能，提供修复建议
 
 我会在 **48 小时内**确认收到你的报告，并在 **7 个工作日内**提供初步评估。
+
+## 本地凭据说明
+
+- Bangumi Access Token 由 Rust 侧使用 **Windows DPAPI（当前用户范围）** 加密后保存在：
+  - 正式版：`%APPDATA%\HoshimiNest\bangumi-auth.json`
+  - 开发版（`yarn tauri:dev`）：`%APPDATA%\com.vaciller.hoshiminest.dev\bangumi-auth.json`
+- 文件中只有密文（`{ "v": 1, "blob": [...] }`），明文不会写入磁盘，也不会存入 `localStorage`。
+- 在应用内点「退出登录」或删除上述文件即可清除凭据；更换 Windows 用户或机器后该文件无法解密（属于预期行为）。
+- **请勿在 Issue / PR / 截图中粘贴 Access Token。**

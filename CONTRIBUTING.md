@@ -13,17 +13,21 @@
 
 ## 本地开发环境
 
-```bash
+**环境要求**：Windows + PowerShell。
+
+```powershell
 # 1. Fork 本仓库到你的账号，然后克隆
-git clone git@github.com:<your-username>/Example-of-Github-Repo.git
-cd Example-of-Github-Repo
+git clone git@github.com:VaillerTeeter/HoshimiNest.git
+cd HoshimiNest
 
-# 2. 配置 GitHub Token
-cp .env.example .env
-# 编辑 .env，填入你的 GH_TOKEN
+# 2. 一键检查 / 安装开发依赖（winget、Node.js 24、yarn、rustup、MSVC、WebView2、Tauri CLI、sidecar）
+.\scripts\setup-windows.ps1
 
-# 3. 加载 Token
-export GH_TOKEN="$(grep "^GH_TOKEN=" .env | cut -d= -f2- | tr -d '\r')"
+# 3. 安装前端依赖
+yarn install
+
+# 4. 启动完整 Tauri 窗口（dev identifier，数据与正式版隔离）
+yarn tauri:dev
 ```
 
 ---
@@ -32,25 +36,21 @@ export GH_TOKEN="$(grep "^GH_TOKEN=" .env | cut -d= -f2- | tr -d '\r')"
 
 本仓库所有变更必须通过 Pull Request 合并，**禁止直接 push 到 `master`**。
 
-```bash
+```powershell
 # 1. 基于 master 创建功能分支
 git checkout master
 git pull origin master
 git checkout -b feat/your-feature-name
 
-# 2. 完成修改，提交
-git add .
+# 2. 完成修改并提交（消息格式见下一节）
+git add <files>
 git commit -m "feat: describe your change"
 
 # 3. 推送
-git push origin feat/your-feature-name
-
-# 4. 创建 PR（需先写 body 文件，等待确认后再执行）
-# 参考 .github/instructions/git-workflow.instructions.md 中的 PR Workflow 规范
-# a. 将 PR body 写入 tmp/pr-<number>-body.md（按 .github/PULL_REQUEST_TEMPLATE.md 填写）
-# b. 确认内容后执行：
-gh pr create --title "标题" --body-file tmp/pr-<number>-body.md --base master
+git push -u origin feat/your-feature-name
 ```
+
+创建 PR 前，先把描述写入 `tmp/pr-<number>-body.md`（按 [.github/PULL_REQUEST_TEMPLATE.md](./.github/PULL_REQUEST_TEMPLATE.md) 填写）并确认，再通过 MCP 工具创建 —— 具体流程见 [.clinerules/git-workflow.md](./.clinerules/git-workflow.md)。
 
 ---
 
@@ -67,6 +67,11 @@ gh pr create --title "标题" --body-file tmp/pr-<number>-body.md --base master
 | `refactor:` | 重构（不新增功能，不修复 Bug） |
 | `style:` | 代码格式调整（不影响逻辑） |
 | `test:` | 添加或修改测试 |
+| `perf:` | 性能优化 |
+| `build:` | 构建系统 / 依赖变更 |
+| `ci:` | CI 配置变更 |
+| `security:` | 安全相关修复 |
+| `deps:` | 依赖升级 |
 
 示例：`feat: add Python example code`
 

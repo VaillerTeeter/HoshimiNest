@@ -17,8 +17,8 @@ HoshimiNest is a desktop anime tracking & download manager.
 ### Frontend
 
 - **React 19 + TypeScript** — functional components + hooks, strict mode
-- **Vite 7** — bundler, dev port `1520`
-- **Zustand** — state management (`src/store/`)
+- **Vite 8** — bundler, dev port `1520`
+- **React Context + hooks** — global state (`src/store/`: `DownloadProvider` / `AuthProvider`)
 - **Plain CSS** — NO Tailwind, NO CSS-in-JS
 - **Yarn** — the ONLY package manager
 
@@ -50,9 +50,14 @@ Bundled with the app via `externalBin`:
 ```text
 src/                                       # React frontend source
   ├── App.css                              # global layout & component styles (colors reference theme.css vars)
-  ├── App.tsx                              # root component (topbar + sidebar nav + download settings modal)
+  ├── App.tsx                              # root component (topbar with account panel + sidebar nav)
+  ├── appMeta.ts                           # app name / version / User-Agent (single source)
   ├── assets/
   │   └── fonts/                           # bundled font files
+  ├── components/                          # shared (non-page) components
+  │   └── AccountPanel.tsx                 # topbar account popover (login form / profile)
+  ├── hooks/                               # custom React hooks
+  │   └── useNotification.ts               # desktop notification hook
   ├── main.tsx                             # React entry point
   ├── pages/                               # page-level components (one per nav item)
   │   ├── BacklogPage.tsx                  # backlog / plan-to-watch
@@ -68,13 +73,15 @@ src/                                       # React frontend source
   │   ├── finished/                        # completed anime sub-components
   │   ├── tracks/                          # track workshop sub-components
   │   └── watchlist/                       # watchlist sub-components
+  ├── relay.ts                             # relay origin + shared Bangumi client / cover url rewrite
   ├── store/                               # global state
+  │   ├── authStore.tsx                    # auth context (token probe + profile cache)
   │   ├── downloadStore.tsx                # download task context (state machine + aria2 events + localStorage)
   │   └── watchStore.ts                    # watchlist localStorage helpers
   ├── styles/
   │   ├── fonts.css                        # @font-face declarations
   │   └── theme.css                        # theme CSS variables
-  └── vite-env.d.ts                        # Vite type declarations
+  └── vite-env.d.ts                        # Vite type declarations (+ injected __APP_VERSION__)
 src-tauri/                                 # Tauri/Rust backend
   ├── app-config.json                      # compile-time config (BT trackers, ports, cache)
   ├── build.rs                             # Tauri build script
@@ -82,8 +89,9 @@ src-tauri/                                 # Tauri/Rust backend
   │   └── default.json                     # Tauri ACL capability config
   ├── icons/                               # app icons
   ├── src/
-  │   ├── lib.rs                           # Tauri commands + aria2 control + mkvmerge track merge
+  │   ├── lib.rs                           # Tauri commands + aria2 control + mkvmerge + DPAPI credentials
   │   └── main.rs                          # Rust entry point
+  ├── tauri.dev.conf.json                  # dev config (identifier override, isolated data)
   └── tauri.conf.json                      # Tauri app config (window/bundle/permissions)
 scripts/                                   # dev & setup scripts (.ps1)
 ```
@@ -96,7 +104,7 @@ NEVER suggest re-installing these — already in `package.json`:
 
 - `@tauri-apps/api`, `@tauri-apps/plugin-dialog`, `@tauri-apps/plugin-opener`
 - `animal-island-ui`, `bangumi-api-client`
-- `react`, `react-dom`, `zustand`
+- `react`, `react-dom`
 
 ## Dev Commands
 
@@ -107,6 +115,11 @@ yarn build         # TypeScript check + Vite build
 yarn tauri:build   # production Tauri bundle
 yarn rustcheck     # cargo check (Rust compilation check only)
 ```
+
+## Networking & Credentials
+
+- All Bangumi / Nyaa traffic MUST go through the relay defined in `src/relay.ts`; never hardcode `api.bgm.tv`, `lain.bgm.tv` or `nyaa.si`.
+- Bangumi tokens are persisted by Rust (Windows DPAPI) in `<app_config_dir>/bangumi-auth.json`; NEVER store credentials in `localStorage`.
 
 ## Window Config
 

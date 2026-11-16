@@ -103,7 +103,7 @@
 | `strict-boolean-expressions` | error | 禁止隐式布尔转换 |
 | `consistent-type-imports` | error | 类型导入必须使用 `import type` |
 | `no-unsafe-*` | error | 禁止不安全的类型操作 |
-| `max-lines-per-function` | error | 单函数最多 60 行 |
+| `max-lines-per-function` | error | 单函数最多 100 行 |
 | `max-lines` | error | 单文件最多 500 行 |
 | `complexity` | error | 圈复杂度最大 12 |
 | `import/no-cycle` | error | 禁止循环依赖 |
@@ -116,7 +116,7 @@
 
 ## CSS Lint
 
-**工具**：[Stylelint](https://stylelint.io/) 16
+**工具**：[Stylelint](https://stylelint.io/) 17
 **配置**：[.lintrc/frontend/css-styles/.stylelintrc.json](../../../.lintrc/frontend/css-styles/.stylelintrc.json)
 **扫描范围**：`src/**/*.css`
 
@@ -138,7 +138,7 @@
 
 ## Rust Lint
 
-**工具**：clippy + rustfmt（stable 工具链）
+**工具**：clippy + rustfmt（nightly 工具链）
 **配置**：
 
 - Clippy：[.lintrc/backend/rust/.clippy.toml](../../../.lintrc/backend/rust/.clippy.toml)
