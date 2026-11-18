@@ -6,6 +6,8 @@ interface ResultsListProps {
   results: Subject[];
   selectedId: number | null;
   searchError: string | null;
+  /** 列表为空且没有错误时的提示文案 */
+  emptyHint: string;
   onSelect: (id: number) => void;
 }
 
@@ -13,11 +15,15 @@ export function ResultsList({
   results,
   selectedId,
   searchError,
+  emptyHint,
   onSelect,
 }: ResultsListProps): React.JSX.Element {
   return (
     <div className="query-results-left">
       {searchError !== null && <p className="query-error">{searchError}</p>}
+      {searchError === null && results.length === 0 && (
+        <p className="query-empty-hint">{emptyHint}</p>
+      )}
       {results.map((item) => (
         <button
           key={item.id}

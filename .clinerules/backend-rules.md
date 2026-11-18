@@ -1,5 +1,5 @@
 ---
-description: "Use when: writing or modifying Rust code in src-tauri/. Covers Tauri command structure, state management, external process handling, logging, and compile-time config."
+description: "Use when: writing or modifying Rust code in src-tauri/. Covers Tauri command structure, state management, external process handling, logging, compile-time config, and credential storage."
 globs: "src-tauri/**"
 alwaysApply: false
 ---
@@ -72,6 +72,8 @@ error!("[merge][{}] 合并失败: {}", job.id, msg.trim());
 
 Use `debug!` for detailed diagnostics, `info!` for lifecycle events, `warn!` for recoverable issues, `error!` for failures.
 
+NEVER log credentials (tokens, passwords, secrets) or their fragments — record only lifecycle events such as `[auth] token 已加密保存` / `[auth] token 已清除`.
+
 Register `env_logger` in `run()` before the Tauri builder. Do NOT add additional logging frameworks.
 
 ## External Processes
@@ -89,6 +91,14 @@ External binaries (`aria2c`, `mkvmerge`) are bundled via `externalBin` in `tauri
 
 Always handle `CommandEvent::Stdout`, `Stderr`, `Terminated`, and the `None` case in the event loop.
 
+### mkvmerge Merge Conventions
+
+Merge jobs must keep these invariants:
+
+- Emit `--no-chapters` **per input file** — it only applies to the file that follows it, so later inputs would keep their chapters otherwise.
+- Mark exactly one subtitle track as default (`--default-track-flag <id>:1`, every other subtitle `0`); A-side video / audio tracks are the defaults.
+- Clear track names (`--track-name <id>:`) and only pass `--language` when the label is non-empty — an empty label keeps the language of the source file.
+
 ## Compile-time Config
 
 Compile-time configuration lives in `src-tauri/app-config.json`. Embed it at compile time with `include_str!`:
@@ -102,11 +112,27 @@ fn load_app_config() -> Result<AppConfig, String> {
 
 Define a `#[derive(serde::Deserialize)]` struct matching the JSON shape. Changes to `app-config.json` take effect on the next `cargo build`.
 
+## Credential Storage (Windows DPAPI)
+
+Persist secrets (e.g. the Bangumi access token) only through dedicated commands: `save_bangumi_token`, `load_bangumi_token`, `clear_bangumi_token`.
+
+Store them in `<app_config_dir>/bangumi-auth.json` as `{ "v": 1, "blob": [..] }`, where `blob` is the DPAPI ciphertext — plaintext must never touch disk.
+
+Access DPAPI through the raw `extern "system"` FFI in the `win_ffi` module (`crypt32`) instead of adding a `windows` / `windows-sys` dependency.
+
+Every `unsafe` block needs a `// SAFETY:` comment plus `// nosemgrep: rust-unsafe-block`. Every `std::fs::read` / `write` / `remove_file` needs `// nosemgrep: rust-path-traversal` and a comment stating the path comes from `app_config_dir`.
+
+Off Windows (`#[cfg(not(windows))]`) the helpers MUST return an error instead of falling back to plaintext.
+
+Decrypt failures MUST delete the file and return `None` (treated as logged out) — never panic.
+
 ## HTTP Client
 
 Always use `reqwest` for outbound HTTP. Include `use reqwest::Client;` and build clients with `reqwest::Client::builder()`.
 
 Include reasonable `User-Agent` headers for external scraping. Use `.timeout(Duration::from_secs(N))` on requests to aria2c and external services.
+
+External API / page fetching goes through the relay (`src/relay.ts`) on the frontend and `fetch_html` (20s timeout) on the Rust side — never hardcode `api.bgm.tv` or `nyaa.si` in request paths.
 
 ```rust
 let client = reqwest::Client::builder()

@@ -10,7 +10,8 @@ import { PersonModal } from './PersonModal';
 import { ResultsList } from './ResultsList';
 import { SubjectDetail } from './SubjectDetail';
 import { SOURCES, AUDIENCES, PLATFORMS, REGIONS, GENRES } from './queryHelpers';
-import { type FilterState, useFilteredSubjects } from './useQueryPageState';
+import { useFilteredSubjects } from './subjectFilters';
+import type { FilterState, QueryMode } from './useQueryPageState';
 import { useCharacters, useEpisodes, usePersons } from './useSubjectData';
 
 // ── SubjectDetailPanel ───────────────────────────────────────────────────────
@@ -87,9 +88,15 @@ function SubjectDetailPanel({
 interface QueryFiltersProps {
   filterState: FilterState;
   monthFilterOptions: Array<{ value: string; label: string }>;
+  /** 关键字模式下结果跨年份，「月份」筛选无意义，直接隐藏 */
+  showMonth: boolean;
 }
 
-function QueryFilters({ filterState, monthFilterOptions }: QueryFiltersProps): React.JSX.Element {
+function QueryFilters({
+  filterState,
+  monthFilterOptions,
+  showMonth,
+}: QueryFiltersProps): React.JSX.Element {
   const {
     filterMonths,
     setFilterMonths,
@@ -106,12 +113,14 @@ function QueryFilters({ filterState, monthFilterOptions }: QueryFiltersProps): R
   } = filterState;
   return (
     <div className="query-filters">
-      <FilterGroup
-        label="月份"
-        options={monthFilterOptions}
-        selected={filterMonths}
-        onChange={setFilterMonths}
-      />
+      {showMonth && (
+        <FilterGroup
+          label="月份"
+          options={monthFilterOptions}
+          selected={filterMonths}
+          onChange={setFilterMonths}
+        />
+      )}
       <FilterGroup
         label="来源"
         options={SOURCES.map((s) => ({ value: s, label: s }))}
@@ -154,6 +163,8 @@ interface QueryResultsViewProps {
   filterState: FilterState;
   watchStatus: Record<number, WatchStatus>;
   monthFilterOptions: Array<{ value: string; label: string }>;
+  /** 结果来源：季度浏览 or 番剧名模糊搜索 */
+  mode: QueryMode;
   onBack: () => void;
   onWatchChange: (id: number, label: WatchStatus | '无状态') => void;
 }
@@ -164,6 +175,7 @@ export function QueryResultsView({
   filterState,
   watchStatus,
   monthFilterOptions,
+  mode,
   onBack,
   onWatchChange,
 }: QueryResultsViewProps): React.JSX.Element {
@@ -184,7 +196,11 @@ export function QueryResultsView({
           <Button type="primary" onClick={onBack} className="query-back-btn">
             返回
           </Button>
-          <QueryFilters filterState={filterState} monthFilterOptions={monthFilterOptions} />
+          <QueryFilters
+            filterState={filterState}
+            monthFilterOptions={monthFilterOptions}
+            showMonth={mode === 'season'}
+          />
         </div>
         <Divider type="line-teal" />
       </div>
@@ -193,6 +209,11 @@ export function QueryResultsView({
           results={filteredResults}
           selectedId={selectedId}
           searchError={searchError}
+          emptyHint={
+            mode === 'keyword'
+              ? '没有找到相关番剧，试试日文原名或更短的关键词'
+              : '没有符合筛选条件的番剧'
+          }
           onSelect={(id) => {
             setSelectedId(id);
           }}

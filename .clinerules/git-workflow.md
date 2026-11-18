@@ -137,7 +137,7 @@ chore/<description>  # maintenance / chore
 
 NEVER use Chinese characters in commit messages (subject or body).
 
-NEVER exceed 100 characters per line in commit messages.
+Keep every commit message line within 100 characters. commitlint enforces 120 for the header and 400 for body lines, so wrapping at 100 always passes.
 
 ✅ `feat: add episode search endpoint`
 ❌ `feat: 新增剧集搜索接口`

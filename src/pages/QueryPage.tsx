@@ -1,7 +1,10 @@
+import { useState } from 'react';
+
 import { QueryResultsView } from './QueryPage/QueryResultsView';
 import { QuerySearchView } from './QueryPage/QuerySearchView';
 import { type SeasonKey, getAvailableSeasons, seasonToMonths } from './QueryPage/queryHelpers';
 import {
+  seasonLabel,
   useFilterState,
   useQuerySearch,
   useTitleEffect,
@@ -12,7 +15,7 @@ import {
 interface QueryPageProps {
   onLoadingChange?: (loading: boolean) => void;
   cancelRef?: { current: (() => void) | null };
-  onTitleChange?: (parts: { yearSeason: string; count: number } | null) => void;
+  onTitleChange?: (parts: { label: string; count: number } | null) => void;
 }
 
 export default function QueryPage({
@@ -21,15 +24,30 @@ export default function QueryPage({
   onTitleChange,
 }: QueryPageProps): React.JSX.Element {
   const { year, season, setSeason, handleYearChange } = useYearSeason();
-  const { isLoading, results, searchError, setResults, setSearchError, handleSearch } =
-    useQuerySearch(year, season, onLoadingChange, cancelRef);
+  const {
+    isLoading,
+    results,
+    searchError,
+    mode,
+    activeKeyword,
+    searchEmpty,
+    setResults,
+    setSearchError,
+    handleSearch,
+    handleKeywordSearch,
+    resetToSeason,
+  } = useQuerySearch(year, season, onLoadingChange, cancelRef);
+  const [keyword, setKeyword] = useState('');
   const filterState = useFilterState();
   const { watchStatus, handleWatchChange } = useWatchStatus(results);
-  useTitleEffect(results, year, season, onTitleChange);
+  const titleLabel =
+    mode === 'keyword' ? `“${activeKeyword}”` : `${year}年${seasonLabel(season)}季`;
+  useTitleEffect(results, titleLabel, onTitleChange);
 
   const handleBack = (): void => {
     setResults([]);
     setSearchError(null);
+    resetToSeason();
   };
 
   const seasonOptions = getAvailableSeasons(year);
@@ -48,6 +66,7 @@ export default function QueryPage({
           filterState={filterState}
           watchStatus={watchStatus}
           monthFilterOptions={monthFilterOptions}
+          mode={mode}
           onBack={handleBack}
           onWatchChange={handleWatchChange}
         />
@@ -56,11 +75,22 @@ export default function QueryPage({
           year={year}
           season={season}
           seasonOptions={seasonOptions}
+          keyword={keyword}
           isLoading={isLoading}
           searchError={searchError}
+          searchEmpty={searchEmpty}
+          emptyHint={
+            mode === 'keyword'
+              ? '没有找到相关番剧，试试日文原名或更短的关键词'
+              : '该季度没有番剧，换个年份 / 季度试试'
+          }
           onYearChange={handleYearChange}
           onSeasonChange={(v) => {
             setSeason(v as SeasonKey);
+          }}
+          onKeywordChange={setKeyword}
+          onKeywordSearch={() => {
+            void handleKeywordSearch(keyword, filterState.resetFilters);
           }}
           onSearch={() => {
             void handleSearch(filterState.resetFilters);

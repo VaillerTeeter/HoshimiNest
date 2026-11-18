@@ -505,7 +505,8 @@ struct MergeFileReq {
 struct MergeJobReq {
     id: String,
     file_a: MergeFileReq,
-    file_b: MergeFileReq,
+    /// B 版：字幕 / 附加文件，可 0..N（前端一次多选后整体替换）
+    file_b: Vec<MergeFileReq>,
     output_dir: String,
     output_name: String
 }
@@ -535,11 +536,13 @@ struct MergeQueueDoneEvt {
 // ── mkvmerge helpers ──────────────────────────────────────────────────────
 
 /// Mutable state shared across `push_file_track_args` calls within a single
-/// merge job.  Grouping the two mutable references into one struct keeps the
-/// argument count under the clippy threshold.
+/// merge job.  Grouping the shared state into one struct keeps the argument
+/// count under the clippy threshold.
 struct MergeCtx<'a> {
     args: &'a mut Vec<String>,
-    track_order: &'a mut Vec<String>
+    track_order: &'a mut Vec<String>,
+    /// 应作为默认字幕轨的 (文件序号, 轨道 id)；None 表示没有选中字幕
+    subtitle_default: Option<(usize, u32)>
 }
 
 /// 为单个输入文件拼接按轨道类型分组的选择参数（替代已弃用的 --tracks）
@@ -550,6 +553,9 @@ fn push_file_track_args(
     job_id: &str,
     role: &str
 ) {
+    // --no-chapters 是「每个输入文件」选项，只对紧随其后的输入生效；
+    // 因此每个输入都要带一次，否则 B 槽里重复出现的同一文件仍会把章节带进来。
+    ctx.args.push("--no-chapters".to_string());
     for (type_str, flag_sel, flag_none) in [
         ("video", "--video-tracks", "--no-video"),
         ("audio", "--audio-tracks", "--no-audio"),
@@ -587,42 +593,87 @@ fn push_file_track_args(
                 // 使用 --track-name ID: 将名称置为空字符串
                 ctx.args.push("--track-name".to_string());
                 ctx.args.push(format!("{}:", t.id));
+                // 默认轨道：A 区的视频 / 音频全部默认；字幕只让预先算好的那条为默认，
+                // 其余显式置 0，避免多个 default 字幕轨同时存在。
+                let is_default = match type_str {
+                    "video" | "audio" => file_idx == 0,
+                    _ => ctx.subtitle_default == Some((file_idx, t.id))
+                };
+                let default_flag = if is_default {
+                    1
+                } else {
+                    0
+                };
+                ctx.args.push("--default-track-flag".to_string());
+                ctx.args.push(format!("{}:{}", t.id, default_flag));
                 ctx.track_order.push(format!("{}:{}", file_idx, t.id));
             }
         }
     }
 }
 
+/// 选中字幕里谁是默认轨：只有一条时就是它；多条时取标签为 `zh-Hans` 的那条，
+/// 没有 `zh-Hans` 标签时退回第一条选中字幕。
+fn resolve_subtitle_default(job: &MergeJobReq) -> Option<(usize, u32)> {
+    let mut first: Option<(usize, u32)> = None;
+    let mut hans: Option<(usize, u32)> = None;
+    let mut count = 0_usize;
+
+    let groups = std::iter::once((0_usize, job.file_a.tracks.as_slice()))
+        .chain(job.file_b.iter().enumerate().map(|(idx, file)| (idx + 1, file.tracks.as_slice())));
+
+    for (file_idx, tracks) in groups {
+        for t in tracks.iter().filter(|t| t.selected && t.track_type == "subtitle") {
+            count += 1;
+            if first.is_none() {
+                first = Some((file_idx, t.id));
+            }
+            if hans.is_none() && t.label == "zh-Hans" {
+                hans = Some((file_idx, t.id));
+            }
+        }
+    }
+
+    if count <= 1 {
+        first
+    } else {
+        hans.or(first)
+    }
+}
+
 fn build_mkvmerge_args(job: &MergeJobReq) -> Result<Vec<String>, String> {
     let path_a = job.file_a.path.as_deref().ok_or("fileA path is missing")?;
-    let path_b = job.file_b.path.as_deref().ok_or("fileB path is missing")?;
 
     debug!(
-        "[merge][{}] A={:?}({} tracks) B={:?}({} tracks)",
+        "[merge][{}] A={:?}({} tracks) B={} file(s)",
         job.id,
         path_a,
         job.file_a.tracks.len(),
-        path_b,
-        job.file_b.tracks.len()
+        job.file_b.len()
     );
 
     let out_path = std::path::Path::new(&job.output_dir).join(&job.output_name);
+    // 章节在 push_file_track_args 里按输入文件逐个关闭（--no-chapters 是单文件选项）
     let mut args = vec!["-o".to_string(), out_path.to_string_lossy().to_string()];
     info!("[merge][{}] 输出: {:?}", job.id, out_path);
 
     let mut track_order: Vec<String> = Vec::new();
     let mut ctx = MergeCtx {
         args: &mut args,
-        track_order: &mut track_order
+        track_order: &mut track_order,
+        subtitle_default: resolve_subtitle_default(job)
     };
 
     // ── File A ──
     push_file_track_args(&mut ctx, &job.file_a.tracks, 0, &job.id, "fileA");
     ctx.args.push(path_a.to_string());
 
-    // ── File B ──
-    push_file_track_args(&mut ctx, &job.file_b.tracks, 1, &job.id, "fileB");
-    ctx.args.push(path_b.to_string());
+    // ── File B（字幕 / 附加文件，可 0..N）──
+    for (idx, file_b) in job.file_b.iter().enumerate() {
+        let path_b = file_b.path.as_deref().ok_or("fileB path is missing")?;
+        push_file_track_args(&mut ctx, &file_b.tracks, idx + 1, &job.id, "fileB");
+        ctx.args.push(path_b.to_string());
+    }
 
     // ── Track order ──
     if !ctx.track_order.is_empty() {
@@ -773,6 +824,8 @@ mod win_ffi {
     pub const JOB_EXTENDED_LIMIT_INFO: i32 = 9;
     pub const PROCESS_SET_QUOTA: DWORD = 0x0100;
     pub const PROCESS_TERMINATE: DWORD = 0x0001;
+    /// CRYPTPROTECT_UI_FORBIDDEN — never prompt the user from DPAPI.
+    pub const CRYPTPROTECT_UI_FORBIDDEN: u32 = 0x0000_0001;
 
     // Mirrors JOBOBJECT_BASIC_LIMIT_INFORMATION (64 bytes on x64).
     // Field order and repr(C) must match the Windows SDK layout exactly.
@@ -813,6 +866,13 @@ mod win_ffi {
         pub peak_job_memory: usize
     }
 
+    // Mirrors Windows DATA_BLOB — input/output buffer used by DPAPI.
+    #[repr(C)]
+    pub struct DataBlob {
+        pub cb_data: u32,
+        pub pb_data: *mut u8
+    }
+
     #[link(name = "kernel32")]
     extern "system" {
         pub fn CreateJobObjectW(
@@ -832,6 +892,32 @@ mod win_ffi {
         pub fn OpenProcess(desired_access: DWORD, inherit: BOOL, pid: DWORD) -> HANDLE;
 
         pub fn CloseHandle(h: HANDLE) -> BOOL;
+
+        pub fn LocalFree(h_mem: *mut core::ffi::c_void) -> *mut core::ffi::c_void;
+    }
+
+    // DPAPI — encrypts/decrypts blobs with the current Windows user's key.
+    #[link(name = "crypt32")]
+    extern "system" {
+        pub fn CryptProtectData(
+            p_data_in: *const DataBlob,
+            sz_data_descr: *const u16,
+            p_optional_entropy: *const DataBlob,
+            pv_reserved: *const core::ffi::c_void,
+            p_prompt_struct: *const core::ffi::c_void,
+            dw_flags: u32,
+            p_data_out: *mut DataBlob
+        ) -> BOOL;
+
+        pub fn CryptUnprotectData(
+            p_data_in: *const DataBlob,
+            ppsz_data_descr: *mut *mut u16,
+            p_optional_entropy: *const DataBlob,
+            pv_reserved: *const core::ffi::c_void,
+            p_prompt_struct: *const core::ffi::c_void,
+            dw_flags: u32,
+            p_data_out: *mut DataBlob
+        ) -> BOOL;
     }
 }
 
@@ -899,6 +985,124 @@ fn win_assign_pid_to_job(job: usize, pid: u32) {
     // SAFETY: proc handle is valid (non-null).
     // nosemgrep: rust-unsafe-block
     unsafe { CloseHandle(proc) };
+}
+
+/// Encrypt bytes with Windows DPAPI (current user scope), returning ciphertext.
+#[cfg(windows)]
+fn win_dpapi_encrypt(plain: &[u8]) -> Result<Vec<u8>, String> {
+    use win_ffi::*;
+
+    let len = u32::try_from(plain.len()).map_err(|_| "凭据过长，无法加密".to_string())?;
+    let in_blob = DataBlob {
+        cb_data: len,
+        pb_data: plain.as_ptr() as *mut u8
+    };
+    let mut out_blob = DataBlob {
+        cb_data: 0,
+        pb_data: std::ptr::null_mut()
+    };
+
+    // SAFETY: in_blob borrows `plain` for its whole length; out_blob is zero
+    // initialised and only written by the API on success.
+    // nosemgrep: rust-unsafe-block
+    let ok = unsafe {
+        CryptProtectData(
+            &in_blob,
+            std::ptr::null(),
+            std::ptr::null(),
+            std::ptr::null(),
+            std::ptr::null(),
+            CRYPTPROTECT_UI_FORBIDDEN,
+            &mut out_blob
+        )
+    };
+    if ok == 0 {
+        let err = std::io::Error::last_os_error();
+        return Err(format!("DPAPI 加密失败: {err}"));
+    }
+
+    let ptr = out_blob.pb_data;
+    let out_len = out_blob.cb_data as usize;
+    // SAFETY: on success the API allocated out_blob.pb_data with LocalAlloc and
+    // wrote out_blob.cb_data bytes into it.
+    // nosemgrep: rust-unsafe-block
+    let cipher = unsafe { std::slice::from_raw_parts(ptr, out_len) }.to_vec();
+    // SAFETY: the buffer was allocated by CryptProtectData and must be released
+    // with LocalFree.
+    // nosemgrep: rust-unsafe-block
+    unsafe { LocalFree(out_blob.pb_data.cast()) };
+    Ok(cipher)
+}
+
+/// Decrypt bytes produced by [`win_dpapi_encrypt`] on the same Windows user.
+#[cfg(windows)]
+fn win_dpapi_decrypt(cipher: &[u8]) -> Result<Vec<u8>, String> {
+    use win_ffi::*;
+
+    let len = u32::try_from(cipher.len()).map_err(|_| "密文过长，无法解密".to_string())?;
+    let in_blob = DataBlob {
+        cb_data: len,
+        pb_data: cipher.as_ptr() as *mut u8
+    };
+    let mut out_blob = DataBlob {
+        cb_data: 0,
+        pb_data: std::ptr::null_mut()
+    };
+
+    // SAFETY: in_blob borrows `cipher` for its whole length; out_blob is zero
+    // initialised and only written by the API on success.
+    // nosemgrep: rust-unsafe-block
+    let ok = unsafe {
+        CryptUnprotectData(
+            &in_blob,
+            std::ptr::null_mut(),
+            std::ptr::null(),
+            std::ptr::null(),
+            std::ptr::null(),
+            CRYPTPROTECT_UI_FORBIDDEN,
+            &mut out_blob
+        )
+    };
+    if ok == 0 {
+        let err = std::io::Error::last_os_error();
+        return Err(format!("DPAPI 解密失败: {err}"));
+    }
+
+    let ptr = out_blob.pb_data;
+    let out_len = out_blob.cb_data as usize;
+    // SAFETY: on success the API allocated out_blob.pb_data with LocalAlloc and
+    // wrote out_blob.cb_data bytes into it.
+    // nosemgrep: rust-unsafe-block
+    let plain = unsafe { std::slice::from_raw_parts(ptr, out_len) }.to_vec();
+    // SAFETY: the buffer was allocated by CryptUnprotectData and must be
+    // released with LocalFree.
+    // nosemgrep: rust-unsafe-block
+    unsafe { LocalFree(out_blob.pb_data.cast()) };
+    Ok(plain)
+}
+
+/// Encrypt a credential blob for at-rest storage (Windows DPAPI).
+#[cfg(windows)]
+fn protect_secret(plain: &[u8]) -> Result<Vec<u8>, String> {
+    win_dpapi_encrypt(plain)
+}
+
+/// Encrypt a credential blob for at-rest storage — unsupported off Windows.
+#[cfg(not(windows))]
+fn protect_secret(_plain: &[u8]) -> Result<Vec<u8>, String> {
+    Err("当前平台不支持加密凭据存储".to_string())
+}
+
+/// Decrypt a credential blob produced by [`protect_secret`] (Windows DPAPI).
+#[cfg(windows)]
+fn unprotect_secret(cipher: &[u8]) -> Result<Vec<u8>, String> {
+    win_dpapi_decrypt(cipher)
+}
+
+/// Decrypt a credential blob — unsupported off Windows.
+#[cfg(not(windows))]
+fn unprotect_secret(_cipher: &[u8]) -> Result<Vec<u8>, String> {
+    Err("当前平台不支持加密凭据存储".to_string())
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────
@@ -1082,6 +1286,108 @@ async fn fetch_html(url: String) -> Result<String, String> {
         .text()
         .await
         .map_err(|e| e.to_string())
+}
+
+// ── Bangumi 凭据（DPAPI 加密落盘）──────────────────────────────────────────
+
+/// 认证文件格式版本
+const BGM_AUTH_FILE_VERSION: u8 = 1;
+
+/// 认证文件结构：DPAPI 密文以字节数组形式存 JSON，明文永不落盘。
+#[derive(serde::Serialize, serde::Deserialize)]
+struct BgmAuthFile {
+    /// 格式版本，便于日后迁移
+    v: u8,
+    /// DPAPI 加密后的令牌字节
+    blob: Vec<u8>
+}
+
+/// 认证文件路径：`<app_config_dir>/bangumi-auth.json`
+fn bgm_auth_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = app.path().app_config_dir().map_err(|e| format!("获取配置目录失败: {e}"))?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("创建配置目录失败: {e}"))?;
+    Ok(dir.join("bangumi-auth.json"))
+}
+
+/// 删除认证文件（不存在视为成功）。
+fn remove_auth_file(path: &std::path::Path) -> Result<(), String> {
+    if !path.exists() {
+        return Ok(());
+    }
+    // 路径来自 app_config_dir，非用户输入
+    // nosemgrep: rust-path-traversal
+    std::fs::remove_file(path).map_err(|e| format!("删除认证文件失败: {e}"))
+}
+
+/// 尽力删除认证文件，失败只记日志。
+fn discard_auth_file(path: &std::path::Path) {
+    if let Err(e) = remove_auth_file(path) {
+        warn!("[auth] 清理认证文件失败: {e}");
+    }
+}
+
+/// 读取并解密认证文件；任何异常都返回 None（调用方负责丢弃文件）。
+fn read_auth_file(path: &std::path::Path) -> Option<String> {
+    // 路径来自 app_config_dir，非用户输入
+    // nosemgrep: rust-path-traversal
+    let raw = std::fs::read_to_string(path).map_err(|e| warn!("[auth] 读取失败: {e}")).ok()?;
+    let parsed: BgmAuthFile =
+        serde_json::from_str(&raw).map_err(|e| warn!("[auth] 认证文件格式错误: {e}")).ok()?;
+    if parsed.v != BGM_AUTH_FILE_VERSION {
+        warn!("[auth] 未知认证文件版本 {}", parsed.v);
+        return None;
+    }
+    match unprotect_secret(&parsed.blob) {
+        Ok(plain) => String::from_utf8(plain).ok(),
+        Err(e) => {
+            warn!("[auth] 解密失败: {e}");
+            None
+        }
+    }
+}
+
+/// 加密保存 Bangumi Access Token（DPAPI，当前 Windows 用户）。
+#[tauri::command]
+async fn save_bangumi_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
+    let token = token.trim().to_string();
+    if token.is_empty() {
+        return Err("Token 不能为空".to_string());
+    }
+    let blob = protect_secret(token.as_bytes())?;
+    let file = BgmAuthFile {
+        v: BGM_AUTH_FILE_VERSION,
+        blob
+    };
+    let raw = serde_json::to_string(&file).map_err(|e| format!("序列化认证信息失败: {e}"))?;
+    let path = bgm_auth_path(&app)?;
+    // 路径来自 app_config_dir，非用户输入
+    // nosemgrep: rust-path-traversal
+    std::fs::write(&path, raw).map_err(|e| format!("写入认证文件失败: {e}"))?;
+    info!("[auth] token 已加密保存");
+    Ok(())
+}
+
+/// 读取已保存的 Bangumi Access Token；无有效文件时返回 None。
+#[tauri::command]
+async fn load_bangumi_token(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let path = bgm_auth_path(&app)?;
+    if !path.exists() {
+        return Ok(None);
+    }
+    let token = read_auth_file(&path);
+    if token.is_none() {
+        discard_auth_file(&path);
+    }
+    Ok(token)
+}
+
+/// 清除已保存的 Bangumi Access Token。
+#[tauri::command]
+async fn clear_bangumi_token(app: tauri::AppHandle) -> Result<(), String> {
+    let path = bgm_auth_path(&app)?;
+    remove_auth_file(&path)?;
+    info!("[auth] token 已清除");
+    Ok(())
 }
 
 /// `add_magnet` accepts only 4 user-facing parameters (`app` + 3 payload
@@ -1297,7 +1603,7 @@ fn reveal_in_folder(app: tauri::AppHandle, path: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[allow(clippy::disallowed_methods, clippy::disallowed_macros)]
 pub fn run() {
-    // Initialise env_logger so `RUST_LOG=hoshiminest=debug yarn tauri dev` shows debug output.
+    // Initialise env_logger so `RUST_LOG=hoshiminest=debug yarn tauri:dev` shows debug output.
     // No-op when RUST_LOG is unset; produces no output in normal use.
     let _ = env_logger::try_init();
     // Build up managed state. WinJob is Windows-only so we must break the
@@ -1451,7 +1757,7 @@ pub fn run() {
                     {
                         let _ = child.kill();
                     }
-                    // Explicit exit 0 so `cargo run` / `yarn tauri dev` don't
+                    // Explicit exit 0 so `cargo run` / `yarn tauri:dev` don't
                     // report a spurious error (Windows default exit code for
                     // window-close termination is 0xFFFFFFFF).
                     std::process::exit(0);
@@ -1467,6 +1773,9 @@ pub fn run() {
             reveal_in_folder,
             identify_tracks,
             start_merge_queue,
+            save_bangumi_token,
+            load_bangumi_token,
+            clear_bangumi_token,
         ])
         .run(tauri::generate_context!())
     {

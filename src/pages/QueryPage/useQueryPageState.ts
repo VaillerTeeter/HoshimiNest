@@ -1,5 +1,5 @@
 import type { Subject } from 'bangumi-api-client';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { bgm } from '../../relay';
 import {
@@ -9,6 +9,7 @@ import {
   removeWatchEntry,
 } from '../../store/watchStore';
 
+import { fetchKeyword, keywordCache, normalizeKeyword, rememberKeyword } from './keywordSearch';
 import {
   type SeasonKey,
   seasonToMonths,
@@ -16,8 +17,9 @@ import {
   getAvailableSeasons,
   currentYear,
 } from './queryHelpers';
+import { SEARCH_CONCURRENCY, SEARCH_PAGE_SIZE } from './searchConstants';
 
-function seasonLabel(s: SeasonKey): string {
+export function seasonLabel(s: SeasonKey): string {
   switch (s) {
     case 'winter': {
       return '冬';
@@ -80,12 +82,6 @@ async function fetchMonth(
 }
 
 // -- season search (POST /v0/search/subjects) --------------------------------
-
-/** Server-side page cap for POST /v0/search/subjects (larger values are ignored). */
-const SEARCH_PAGE_SIZE = 20;
-
-/** 4 parallel pages measured fastest (12 pages serial: 3.6 s, 3 batches of 4: ~1.05 s). */
-const SEARCH_CONCURRENCY = 4;
 
 /** Season results are stable enough to keep them for the whole session. */
 const seasonCache = new Map<string, Subject[]>();
@@ -271,13 +267,93 @@ export function useYearSeason(): YearSeasonState {
 
 // ── useQuerySearch ───────────────────────────────────────────────────────────
 
+/** State setters plus overlay hooks shared by every query-page search. */
+interface SearchUi {
+  setIsLoading: (loading: boolean) => void;
+  setResults: (results: Subject[]) => void;
+  setSearchError: (error: string | null) => void;
+  setSearchEmpty: (empty: boolean) => void;
+  onLoadingChange: ((loading: boolean) => void) | undefined;
+  cancelRef: { current: (() => void) | null } | undefined;
+}
+
+/**
+ * 共用的搜索生命周期：遮罩（onLoadingChange）/ 计时 / 取消（cancelRef）/
+ * 错误提示全部集中在这里，季度搜索与关键字搜索共用同一套过场动画。
+ *
+ * @param ui - 状态设置函数与遮罩 / 取消的接入点
+ * @param task - 具体的数据加载逻辑，通过参数拿到取消判定与局部结果回调
+ */
+async function runSearch(
+  ui: SearchUi,
+  task: (isCancelled: () => boolean, onPartial: (subjects: Subject[]) => void) => Promise<void>,
+): Promise<void> {
+  const { setIsLoading, setResults, setSearchError, setSearchEmpty, onLoadingChange, cancelRef } =
+    ui;
+  setIsLoading(true);
+  onLoadingChange?.(true);
+  setResults([]);
+  setSearchError(null);
+  setSearchEmpty(false);
+  const cancelledRef = { cancelled: false };
+  const cancel = (): void => {
+    cancelledRef.cancelled = true;
+    setIsLoading(false);
+    onLoadingChange?.(false);
+    if (cancelRef !== undefined) {
+      cancelRef.current = null;
+    }
+  };
+  if (cancelRef !== undefined) {
+    cancelRef.current = cancel;
+  }
+  let loaded = 0;
+  const isCancelled = (): boolean => cancelledRef.cancelled;
+  const onPartial = (partial: Subject[]): void => {
+    loaded = partial.length;
+    if (!cancelledRef.cancelled) {
+      setResults(partial);
+    }
+  };
+  try {
+    await task(isCancelled, onPartial);
+    if (!cancelledRef.cancelled) {
+      setSearchEmpty(loaded === 0);
+    }
+  } catch {
+    if (!cancelledRef.cancelled) {
+      setSearchError('搜索失败，请稍后重试');
+    }
+  } finally {
+    if (!cancelledRef.cancelled) {
+      if (cancelRef !== undefined) {
+        cancelRef.current = null;
+      }
+      setIsLoading(false);
+      onLoadingChange?.(false);
+    }
+  }
+}
+
+/** Which data source produced the current result list. */
+export type QueryMode = 'season' | 'keyword';
+
 interface QuerySearchResult {
   isLoading: boolean;
   results: Subject[];
   searchError: string | null;
+  /** 'season' = 按年份季度浏览，'keyword' = 按番剧名模糊搜索 */
+  mode: QueryMode;
+  /** 当前生效的关键字（仅 keyword 模式有意义） */
+  activeKeyword: string;
+  /** 上一次搜索正常结束但一条结果都没有（用于搜索界面的空提示） */
+  searchEmpty: boolean;
   setResults: (results: Subject[]) => void;
   setSearchError: (error: string | null) => void;
   handleSearch: (resetFilters: () => void) => Promise<void>;
+  handleKeywordSearch: (keyword: string, resetFilters: () => void) => Promise<void>;
+  /** 返回搜索界面时复位模式标记 */
+  resetToSeason: () => void;
 }
 
 export function useQuerySearch(
@@ -289,56 +365,75 @@ export function useQuerySearch(
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Subject[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [mode, setMode] = useState<QueryMode>('season');
+  const [activeKeyword, setActiveKeyword] = useState('');
+  const [searchEmpty, setSearchEmpty] = useState(false);
+
+  const searchUi: SearchUi = {
+    setIsLoading,
+    setResults,
+    setSearchError,
+    setSearchEmpty,
+    onLoadingChange,
+    cancelRef,
+  };
 
   async function handleSearch(resetFilters: () => void): Promise<void> {
-    setIsLoading(true);
-    onLoadingChange?.(true);
-    setResults([]);
-    setSearchError(null);
+    setMode('season');
+    setActiveKeyword('');
     resetFilters();
-    const cancelledRef = { cancelled: false };
-    const cancel = (): void => {
-      cancelledRef.cancelled = true;
-      setIsLoading(false);
-      onLoadingChange?.(false);
-      if (cancelRef !== undefined) {
-        cancelRef.current = null;
-      }
-    };
-    if (cancelRef !== undefined) {
-      cancelRef.current = cancel;
-    }
-    try {
-      const yearNum = Number(year);
-      const isCancelled = (): boolean => cancelledRef.cancelled;
-      const cacheKey = `${String(yearNum)}-${season}`;
+    const yearNum = Number(year);
+    const cacheKey = `${String(yearNum)}-${season}`;
+    await runSearch(searchUi, async (isCancelled, onPartial) => {
       const cached = seasonCache.get(cacheKey);
-      const onPartial = (partial: Subject[]): void => {
-        if (!cancelledRef.cancelled) {
-          setResults(partial);
-        }
-      };
       if (cached === undefined) {
         await loadSeason(yearNum, season, cacheKey, isCancelled, onPartial);
       } else {
-        setResults(cached);
+        onPartial(cached);
       }
-    } catch {
-      if (!cancelledRef.cancelled) {
-        setSearchError('搜索失败，请稍后重试');
-      }
-    } finally {
-      if (!cancelledRef.cancelled) {
-        if (cancelRef !== undefined) {
-          cancelRef.current = null;
-        }
-        setIsLoading(false);
-        onLoadingChange?.(false);
-      }
-    }
+    });
   }
 
-  return { isLoading, results, searchError, setResults, setSearchError, handleSearch };
+  async function handleKeywordSearch(keyword: string, resetFilters: () => void): Promise<void> {
+    const normalized = normalizeKeyword(keyword);
+    if (normalized === '') {
+      return;
+    }
+    setMode('keyword');
+    setActiveKeyword(normalized);
+    resetFilters();
+    await runSearch(searchUi, async (isCancelled, onPartial) => {
+      const cached = keywordCache.get(normalized);
+      if (cached === undefined) {
+        const subjects = await fetchKeyword(normalized, isCancelled, onPartial);
+        if (!isCancelled()) {
+          rememberKeyword(normalized, subjects);
+        }
+      } else {
+        onPartial(cached);
+      }
+    });
+  }
+
+  function resetToSeason(): void {
+    setMode('season');
+    setActiveKeyword('');
+    setSearchEmpty(false);
+  }
+
+  return {
+    isLoading,
+    results,
+    searchError,
+    mode,
+    activeKeyword,
+    searchEmpty,
+    setResults,
+    setSearchError,
+    handleSearch,
+    handleKeywordSearch,
+    resetToSeason,
+  };
 }
 
 // ── useFilterState ───────────────────────────────────────────────────────────
@@ -393,94 +488,6 @@ export function useFilterState(): FilterState {
   };
 }
 
-// ── useFilteredSubjects ──────────────────────────────────────────────────────
-
-/** The filter values used for computing filtered results. */
-interface FilterSets {
-  filterMonths: Set<string>;
-  filterPlatforms: Set<string>;
-  filterSources: Set<string>;
-  filterGenres: Set<string>;
-  filterRegions: Set<string>;
-  filterAudiences: Set<string>;
-}
-
-function matchesMonth(date: string | undefined | null, filterMonths: Set<string>): boolean {
-  if (date === undefined || date === null || date === '') {
-    return false;
-  }
-  const parts = date.split('-');
-  const [, monthPart] = parts;
-  const m = String(Number.parseInt(monthPart ?? '0', 10));
-  return filterMonths.has(m);
-}
-
-function matchesPlatform(platform: string | undefined, filterPlatforms: Set<string>): boolean {
-  return platform !== undefined && platform !== '' && filterPlatforms.has(platform);
-}
-
-function matchesTagFilters(
-  tagNames: Set<string>,
-  filterSources: Set<string>,
-  filterGenres: Set<string>,
-  filterRegions: Set<string>,
-  filterAudiences: Set<string>,
-): boolean {
-  const passesSource = filterSources.size === 0 || [...filterSources].some((s) => tagNames.has(s));
-  const passesGenre = filterGenres.size === 0 || [...filterGenres].some((g) => tagNames.has(g));
-  const passesRegion = filterRegions.size === 0 || [...filterRegions].some((r) => tagNames.has(r));
-  const passesAudience =
-    filterAudiences.size === 0 || [...filterAudiences].some((a) => tagNames.has(a));
-  return passesSource && passesGenre && passesRegion && passesAudience;
-}
-
-export function useFilteredSubjects(results: Subject[], filters: FilterSets): Subject[] {
-  const {
-    filterMonths,
-    filterPlatforms,
-    filterSources,
-    filterGenres,
-    filterRegions,
-    filterAudiences,
-  } = filters;
-
-  return useMemo<Subject[]>(() => {
-    if (results.length === 0) {
-      return results;
-    }
-    return results.filter((item) => {
-      if (filterMonths.size > 0 && !matchesMonth(item.date, filterMonths)) {
-        return false;
-      }
-      if (filterPlatforms.size > 0 && !matchesPlatform(item.platform, filterPlatforms)) {
-        return false;
-      }
-      if (
-        filterSources.size > 0 ||
-        filterGenres.size > 0 ||
-        filterRegions.size > 0 ||
-        filterAudiences.size > 0
-      ) {
-        const tagNames = new Set(item.tags.map((t) => t.name));
-        if (
-          !matchesTagFilters(tagNames, filterSources, filterGenres, filterRegions, filterAudiences)
-        ) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [
-    results,
-    filterMonths,
-    filterPlatforms,
-    filterSources,
-    filterGenres,
-    filterRegions,
-    filterAudiences,
-  ]);
-}
-
 // ── useWatchStatus ───────────────────────────────────────────────────────────
 
 interface WatchStatusState {
@@ -516,18 +523,14 @@ export function useWatchStatus(results: Subject[]): WatchStatusState {
 
 export function useTitleEffect(
   results: Subject[],
-  year: string,
-  season: SeasonKey,
-  onTitleChange: ((parts: { yearSeason: string; count: number } | null) => void) | undefined,
+  label: string,
+  onTitleChange: ((parts: { label: string; count: number } | null) => void) | undefined,
 ): void {
   useEffect(() => {
     if (results.length > 0) {
-      onTitleChange?.({
-        yearSeason: `${year}年${seasonLabel(season)}季`,
-        count: results.length,
-      });
+      onTitleChange?.({ label, count: results.length });
     } else {
       onTitleChange?.(null);
     }
-  }, [results.length, year, season, onTitleChange]);
+  }, [results.length, label, onTitleChange]);
 }

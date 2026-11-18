@@ -4,192 +4,26 @@
 
 ## 已实现功能
 
-- **季度番剧查询** — 按年份 + 季度浏览 Bangumi 番剧列表，支持平台 / 来源 / 标签 / 地区 / 受众多维筛选，查看详情、评分、简介、剧集、角色、演职人员
+- **季度番剧查询** — 按年份 + 季度浏览 Bangumi 番剧列表，支持平台 / 来源 / 标签 / 地区 / 受众多维筛选，查看详情、评分、简介、剧集、角色、演职人员；整季通过单次 `air_date` 区间查询 + 4 路并发分页拉取，并做会话内缓存；同时提供**番剧名模糊搜索**入口（`/v0/search/subjects`，相关度排序，最多载入 100 条），只记得名字时可直接查全站番剧条目，关键字模式下自动隐藏「月份」筛选
 - **追番管理** — 正在追番 / 补番计划 / 已完番剧三状态收藏，周历视图、网格视图切换
 - **资源搜索** — 搜索 Nyaa 字幕组资源，支持多关键词 AND / OR / NOT 逻辑组合，一键添加磁力下载
-- **番剧下载** — 内嵌 aria2c sidecar，磁力链接下载，任务全生命周期管理（下载中 / 暂停 / 恢复 / 取消 / 重启），状态机防止非法转换；显示阶段、连接数、做种数诊断信息；下载设置弹窗支持 BT Tracker 列表管理、高级参数配置（最大 Peer 数 / 磁盘缓存 / 监听端口），配置全部持久化到磁盘，支持 JSON 导入 / 导出，脏标记提示未保存修改
-- **轨道合并** — MKV 轨道工坊，识别视频 / 音频 / 字幕轨道，支持双文件队列合并（A 版视频 + B 版字幕），实时进度推送，自动清空轨道名称，输出目录默认为 A 版文件所在目录；内嵌 mkvmerge sidecar
+- **番剧下载** — 内嵌 aria2c sidecar，磁力链接下载，任务全生命周期管理（下载中 / 暂停 / 恢复 / 取消 / 重启），状态机防止非法转换；显示阶段、连接数、做种数诊断信息；BT Tracker / 最大 Peer 数 / 磁盘缓存 / 监听端口等参数集中在 `src-tauri/app-config.json`，编译期生效
+- **轨道合并** — MKV 轨道工坊，识别视频 / 音频 / 字幕轨道；A 版视频（取视频 / 音频轨）+ 多份 B 版字幕 / 附加文件（`ass` / `ssa` / `srt` / `sup` / `vtt`，可一次多选）队列合并，实时进度推送；字幕标签按序默认（第 1 条 `zh-Hans`、第 2 条 `zh-Hant`、其余留空即保留源语言），自动清空轨道名称、剔除全部章节，并把 A 版视频 / 音频与唯一一条字幕标记为默认轨，输出目录默认为 A 版文件所在目录；内嵌 mkvmerge sidecar
 - **桌面通知** — 下载完成 / 下载错误 / 合并队列完成时推送 Windows 系统通知
 - **外部磁力链接下载** — 支持直接输入外部磁力链接添加下载任务，不限于 Nyaa 搜索结果
+- **Bangumi 账号** — 使用个人 Access Token 登录，凭据由 Windows DPAPI（当前用户范围）加密后保存在本机；顶栏显示真实头像与昵称，点击头像或昵称用系统默认浏览器打开个人主页，打开账号面板时自动刷新资料
 
-## 目录结构
+## 网络说明
+
+Bangumi API、封面 / 头像图片与 Nyaa 搜索页统一经由自建反向代理访问（域名集中在 `src/relay.ts` 的 `RELAY_ORIGIN`）：
 
 ```text
-.
-├── .clineignore
-├── .clinerules/                               # Cline AI 编码规范（自动加载）
-│   ├── backend-rules.md                       # Tauri v2 / Rust 后端规范
-│   ├── frontend-rules.md                      # React / TypeScript / CSS / Zustand 规范
-│   ├── git-workflow.md                        # Git 操作约束（MCP 写入 / git 只读）
-│   └── project-identity.md                    # 项目身份与架构声明
-├── .editorconfig                              # 编辑器通用格式规范（缩进/换行/编码）
-├── .github/                                   # GitHub 仓库配置与文档
-│   ├── ISSUE_TEMPLATE/                        # Issue 模板（中英文 bug/feature 各一份）
-│   │   ├── bug_report_en.md
-│   │   ├── bug_report_zh.md
-│   │   ├── config.yml
-│   │   ├── feature_request_en.md
-│   │   └── feature_request_zh.md
-│   ├── PULL_REQUEST_TEMPLATE.md               # PR 描述模板
-│   ├── dependabot.yml                         # Dependabot 自动依赖更新配置
-│   ├── docs/                                  # 项目文档
-│   │   ├── ci/
-│   │   │   └── ci-checks.md                   # CI 检查规则说明
-│   │   └── testing/
-│   │       ├── manual-test-guide.md           # 手动测试指南
-│   │       └── screenshots/                   # 测试截图（42 张）
-│   ├── scripts/
-│   │   └── ai-review.mjs                      # AI 代码审查脚本
-│   └── workflows/
-│       ├── lint.yml                           # CI Lint 工作流（15 项检查）
-│       └── review-command.yml                 # Review 命令工作流
-├── .gitignore                                 # Git 忽略规则
-├── .lintrc/                                   # 各工具 Lint 配置
-│   ├── backend/
-│   │   └── rust/
-│   │       ├── .clippy.toml                   # Clippy 静态分析规则
-│   │       └── rustfmt.toml                   # Rust 代码格式化配置
-│   ├── data-formats/
-│   │   ├── toml/
-│   │   │   └── taplo.toml                     # TOML 格式化配置
-│   │   └── yaml/
-│   │       └── issue-config.schema.json       # YAML Issue 配置 schema
-│   ├── docs/
-│   │   └── markdown/
-│   │       └── .markdownlint.json             # Markdown lint 规则
-│   ├── frontend/
-│   │   ├── css-styles/
-│   │   │   └── .stylelintrc.json              # CSS/Stylelint 规则
-│   │   ├── knip.json                          # Knip 未使用导出检查配置
-│   │   ├── prettier/
-│   │   │   └── .prettierrc                    # Prettier 格式化配置
-│   │   └── typescript/
-│   │       ├── .eslintrc-ts.json              # ESLint TypeScript/React 规则
-│   │       └── tsconfig-lint.json             # ESLint 专用 tsconfig
-│   ├── general/
-│   │   ├── .ls-lint.yml                       # 文件命名规范检查
-│   │   ├── .yamllint.yml                      # YAML lint 规则
-│   │   └── cspell.json                        # 拼写检查词典配置
-│   ├── git/
-│   │   └── .commitlintrc.cjs                  # Commit message 规范
-│   ├── infrastructure/
-│   │   └── shell/
-│   │       ├── .shellcheckrc                  # ShellCheck 配置
-│   │       └── PSScriptAnalyzerSettings.psd1  # PowerShell 静态分析规则
-│   └── security/
-│       ├── .gitleaks.toml                     # Gitleaks 密钥泄露扫描配置
-│       └── .semgrep.yml                       # OWASP Top 10 安全扫描规则（TS + Rust）
-├── .vscode/                                   # VS Code 工作区配置
-│   ├── extensions.json                        # 推荐扩展列表
-│   └── settings.json                          # 工作区设置（格式化/lint/Tauri 等）
-├── CODE_OF_CONDUCT.md                         # 行为准则
-├── CONTRIBUTING.md                            # 贡献指南
-├── LICENSE                                    # GPL-3.0 许可证
-├── README.md                                  # 本文件
-├── SECURITY.md                                # 安全漏洞披露政策
-├── index.html                                 # Vite 入口 HTML
-├── package.json                               # npm 包定义、scripts、依赖声明
-├── scripts/
-│   ├── download-aria2.ps1                     # 自动下载 aria2c 二进制（Tauri sidecar）
-│   ├── download-mkvmerge.ps1                  # 自动下载 mkvmerge 二进制（Tauri sidecar）
-│   └── setup-windows.ps1                      # Windows 开发环境一键检查/安装脚本
-├── src/                                       # React 前端源代码
-│   ├── App.css                                # 全局布局与组件样式（颜色全部引用 theme.css 变量）
-│   ├── App.tsx                                # 根组件（主窗口布局：顶栏 + 左侧导航栏 + 下载设置弹窗：Tracker / 高级参数 / 导入导出）
-│   ├── assets/
-│   │   └── fonts/
-│   │       └── ZCOOLKuaiLe-Regular.ttf        # 站酷快乐体（内置，无需网络）
-│   ├── hooks/                                 # 自定义 React Hooks
-│   │   └── useNotification.ts                 # 桌面通知 hook
-│   ├── main.tsx                               # React 入口
-│   ├── pages/                                 # 页面组件（每项导航对应一个页面）
-│   │   ├── BacklogPage.tsx                    # 补番计划
-│   │   ├── DownloadPage.tsx                   # 下载管理
-│   │   ├── FinishedPage.tsx                   # 已完番剧（主文件，拆分逻辑到 finished/）
-│   │   ├── QueryPage/                         # 季度查询子组件
-│   │   │   ├── CharacterModal.tsx             # 角色详情弹窗
-│   │   │   ├── FilterGroup.tsx                # 筛选条件组
-│   │   │   ├── PersonModal.tsx                # 人物详情弹窗
-│   │   │   ├── queryHelpers.ts                # 查询辅助函数
-│   │   │   ├── QueryResultsView.tsx           # 查询结果视图
-│   │   │   ├── QuerySearchView.tsx            # 查询搜索视图
-│   │   │   ├── ResultsList.tsx                # 结果列表
-│   │   │   ├── SubjectDetail.tsx              # 番剧详情
-│   │   │   ├── useQueryPageState.ts           # 查询页面状态 hook
-│   │   │   └── useSubjectData.ts              # 番剧数据 hook
-│   │   ├── QueryPage.tsx                      # 季度查询（主页面）
-│   │   ├── SearchPage/                        # 资源搜索子组件
-│   │   │   ├── SearchTable.tsx                # 搜索结果表格
-│   │   │   ├── types.ts                       # 类型定义
-│   │   │   └── useSearchPage.ts               # 搜索页面状态 hook
-│   │   ├── SearchPage.tsx                     # 搜索资源（主页面）
-│   │   ├── TracksPage.tsx                     # 轨道工坊（主文件，拆分逻辑到 tracks/）
-│   │   ├── WatchListPage.tsx                  # 追番列表基础页（主文件，拆分逻辑到 watchlist/）
-│   │   ├── WatchingPage.tsx                   # 正在追番
-│   │   ├── finished/                          # 已完番剧子组件
-│   │   │   ├── DetailModal.tsx                # 番剧详情弹窗
-│   │   │   ├── EpisodeList.tsx                # 剧集列表
-│   │   │   ├── FinishedCard.tsx               # 番剧卡片
-│   │   │   ├── finishedUtils.ts               # 工具函数
-│   │   │   ├── PeopleModals.tsx               # 人物弹窗
-│   │   │   └── useSubjectData.ts              # 番剧数据 hook
-│   │   ├── tracks/                            # 轨道工坊子组件
-│   │   │   ├── constants.ts                   # 常量定义
-│   │   │   ├── FilePanel.tsx                  # 文件队列面板
-│   │   │   ├── TrackRow.tsx                   # 轨道行组件
-│   │   │   ├── types.ts                       # 类型定义
-│   │   │   └── useTracksPage.ts               # 轨道页面状态 hook
-│   │   └── watchlist/                         # 追番列表子组件
-│   │       ├── CharactersModal.tsx            # 角色列表弹窗
-│   │       ├── constants.ts                   # 常量定义
-│   │       ├── DetailModal.tsx                # 番剧详情弹窗
-│   │       ├── EpisodePills.tsx               # 剧集进度胶囊
-│   │       ├── LayoutContents.tsx             # 布局内容（周历/网格）
-│   │       ├── PersonsModal.tsx               # 人物列表弹窗
-│   │       ├── SubjectCard.tsx                # 番剧卡片
-│   │       ├── types.ts                       # 类型定义
-│   │       └── useWatchListPage.ts            # 追番页面状态 hook
-│   ├── store/                                 # 全局状态
-│   │   ├── downloadStore.tsx                  # 下载任务 Context（状态机 + aria2 事件 + localStorage）
-│   │   └── watchStore.ts                      # 追番收藏 localStorage 工具函数
-│   ├── styles/
-│   │   ├── fonts.css                          # @font-face 声明（引用内置字体文件）
-│   │   └── theme.css                          # 主题 CSS 变量（皮肤切换入口）
-│   └── vite-env.d.ts                          # Vite 类型声明
-├── src-tauri/                                 # Tauri/Rust 后端
-│   ├── Cargo.lock                             # 依赖版本锁定
-│   ├── Cargo.toml                             # Rust 包定义与依赖声明
-│   ├── app-config.json                        # Tauri 应用配置 JSON
-│   ├── build.rs                               # Tauri 构建脚本
-│   ├── capabilities/
-│   │   └── default.json                       # Tauri ACL 权限配置
-│   ├── icons/                                 # 应用图标（Windows Store 等多尺寸）
-│   │   ├── 128x128.png
-│   │   ├── 128x128@2x.png
-│   │   ├── 32x32.png
-│   │   ├── Square107x107Logo.png
-│   │   ├── Square142x142Logo.png
-│   │   ├── Square150x150Logo.png
-│   │   ├── Square284x284Logo.png
-│   │   ├── Square30x30Logo.png
-│   │   ├── Square310x310Logo.png
-│   │   ├── Square44x44Logo.png
-│   │   ├── Square71x71Logo.png
-│   │   ├── Square89x89Logo.png
-│   │   ├── StoreLogo.png
-│   │   ├── icon.icns
-│   │   ├── icon.ico
-│   │   └── icon.png
-│   ├── src/
-│   │   ├── lib.rs                             # Tauri 命令 + aria2 控制 + mkvmerge 轨道识别与合并 + BT Tracker 持久化 + 高级参数持久化（AdvancedConfig）
-│   │   └── main.rs                            # Rust 程序入口
-│   ├── tauri.dev.conf.json                    # Tauri dev 配置（覆盖 identifier 为 dev，隔离测试数据）
-│   └── tauri.conf.json                        # Tauri 应用配置（窗口/bundle/权限）
-├── tsconfig.json                              # TypeScript 编译配置（前端）
-├── tsconfig.node.json                         # TypeScript 配置（Vite 配置文件）
-├── vite.config.ts                             # Vite 构建配置
-└── yarn.lock                                  # Yarn 依赖版本锁定
+<RELAY_ORIGIN>/bgm/   -> https://api.bgm.tv/
+<RELAY_ORIGIN>/lain/  -> https://lain.bgm.tv/   （封面 / 头像）
+<RELAY_ORIGIN>/nyaa/  -> https://nyaa.si/
 ```
+
+BT 下载由内嵌 aria2c 直连 tracker / peer，不经过反向代理。修改反代域名时需同步更新 `src-tauri/tauri.conf.json` 的 CSP `connect-src`。
 
 ## 开发工作流
 
@@ -211,7 +45,9 @@ yarn install
 
 ```bash
 # Windows PowerShell — 启动完整 Tauri 桌面窗口（热重载）
-# 使用 --config 加载 dev identifier，与生产安装数据隔离（%LOCALAPPDATA%\com.vaciller.hoshiminest.dev）
+# 使用 --config 加载 dev identifier，与生产数据隔离：
+#   %APPDATA%\com.vaciller.hoshiminest.dev        （配置 / Bangumi 登录凭据）
+#   %LOCALAPPDATA%\com.vaciller.hoshiminest.dev   （WebView2 / localStorage）
 yarn tauri:dev
 ```
 
@@ -228,6 +64,8 @@ yarn tauri:build
    - `src-tauri/tauri.conf.json`
    - `src-tauri/Cargo.toml`
    - `package.json`
+
+   > 前端展示与 Bangumi 请求的 `User-Agent` 版本号由 `vite.config.ts` 在构建期从 `package.json` 注入，无需再手动同步其它文件。
 
 2. 暂存并提交：
 
@@ -289,10 +127,11 @@ yarn tauri:build
 
 - [Tauri v2](https://tauri.app/) — Windows 桌面应用框架（Rust 后端 + WebView2）
 - [React 19](https://react.dev/) — 前端 UI 框架
-- [Vite 7](https://vite.dev/) — 前端构建工具
+- [Vite 8](https://vite.dev/) — 前端构建工具（版本号构建期注入）
 - [TypeScript](https://www.typescriptlang.org/) — 类型安全的 JavaScript 超集
+- React Context — 全局状态（`src/store/` 中的 Provider + hook，未引入额外状态库）
 - [Tokio](https://tokio.rs/) — Rust 异步运行时（aria2 轮询、RPC 调用）
-- [reqwest](https://docs.rs/reqwest/) — Rust HTTP 客户端（aria2 JSON-RPC 通信）
+- [reqwest](https://docs.rs/reqwest/) — Rust HTTP 客户端（aria2 JSON-RPC、外部网页抓取）
 - [Serde](https://serde.rs/) — Rust 序列化 / 反序列化框架
 
 ### CI / Lint 工具

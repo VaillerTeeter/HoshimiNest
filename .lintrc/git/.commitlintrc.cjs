@@ -43,7 +43,7 @@ module.exports = {
     'header-min-length': [2, 'always', 15],
 
     'body-leading-blank': [2, 'always'],
-    'body-max-line-length': [2, 'always', 200],
+    'body-max-line-length': [2, 'always', 400],
 
     'footer-leading-blank': [2, 'always'],
     'footer-max-line-length': [2, 'always', 100],

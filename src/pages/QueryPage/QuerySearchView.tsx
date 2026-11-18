@@ -18,10 +18,18 @@ interface QuerySearchViewProps {
   year: string;
   season: SeasonKey;
   seasonOptions: ReadonlyArray<{ key: SeasonKey; label: string }>;
+  /** 番剧名模糊搜索关键词 */
+  keyword: string;
   isLoading: boolean;
   searchError: string | null;
+  /** 上一次搜索正常结束但零结果 */
+  searchEmpty: boolean;
+  /** 零结果时的提示文案（随搜索模式变化） */
+  emptyHint: string;
   onYearChange: (v: string) => void;
   onSeasonChange: (v: string) => void;
+  onKeywordChange: (v: string) => void;
+  onKeywordSearch: () => void;
   onSearch: () => void;
 }
 
@@ -29,26 +37,68 @@ export function QuerySearchView({
   year,
   season,
   seasonOptions,
+  keyword,
   isLoading,
   searchError,
+  searchEmpty,
+  emptyHint,
   onYearChange,
   onSeasonChange,
+  onKeywordChange,
+  onKeywordSearch,
   onSearch,
 }: QuerySearchViewProps): React.JSX.Element {
+  const keywordReady = keyword.trim() !== '';
+
   return (
     <>
-      <div className="query-toolbar">
-        <Select options={YEAR_OPTIONS} value={year} onChange={onYearChange} />
-        <Select options={[...seasonOptions]} value={season} onChange={onSeasonChange} />
-        <Button
-          type="primary"
-          icon={<SearchIcon />}
-          onClick={onSearch}
-          className="query-search-btn"
-          disabled={isLoading}
-        />
+      <div className="query-search-panel">
+        <div className="query-keyword-row">
+          <input
+            className="query-keyword-input"
+            type="text"
+            aria-label="番剧名关键词"
+            placeholder="输入番剧名 / 日文原名，模糊搜索…"
+            value={keyword}
+            onChange={(e) => {
+              onKeywordChange(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && keywordReady && !isLoading) {
+                onKeywordSearch();
+              }
+            }}
+            disabled={isLoading}
+          />
+          <Button
+            type="primary"
+            icon={<SearchIcon />}
+            onClick={() => {
+              if (keywordReady) {
+                onKeywordSearch();
+              }
+            }}
+            className="query-search-btn"
+            title="按番剧名搜索"
+            aria-label="按番剧名搜索"
+            disabled={isLoading || !keywordReady}
+          />
+        </div>
+        <div className="query-or-divider">或按年份季度浏览</div>
+        <div className="query-toolbar">
+          <Select options={YEAR_OPTIONS} value={year} onChange={onYearChange} />
+          <Select options={[...seasonOptions]} value={season} onChange={onSeasonChange} />
+          <Button
+            type="primary"
+            icon={<SearchIcon />}
+            onClick={onSearch}
+            className="query-search-btn"
+            disabled={isLoading}
+          />
+        </div>
       </div>
       {searchError !== null && <p className="query-error">{searchError}</p>}
+      {searchError === null && searchEmpty && <p className="query-empty-hint">{emptyHint}</p>}
     </>
   );
 }

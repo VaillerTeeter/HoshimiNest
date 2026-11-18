@@ -227,7 +227,7 @@ else {
         Write-FIXED "tauri-cli 安装完成"
     }
     else {
-        Write-WARN "tauri-cli 安装失败（cargo 不可用时 yarn tauri dev 首次运行会自动安装）"
+        Write-WARN "tauri-cli 安装失败（cargo 不可用时 yarn tauri:dev 首次运行会自动安装）"
         $issues += "tauri-cli"
     }
 }
@@ -274,7 +274,7 @@ if ($issues.Count -eq 0) {
     Out-ColorLine "`n  环境检测通过！下一步：" Green
     Out-ColorLine "    cd HoshimiNest" White
     Out-ColorLine "    yarn install    # 安装前端依赖（首次）" White
-    Out-ColorLine "    yarn tauri dev  # 启动 Tauri 开发窗口" White
+    Out-ColorLine "    yarn tauri:dev  # 启动 Tauri 开发窗口" White
 }
 else {
     Out-ColorLine "`n  以下问题需要手动处理：" Red

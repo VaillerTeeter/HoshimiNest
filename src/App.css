@@ -79,6 +79,274 @@ body,
   line-height: 1;
 }
 
+/* ── Topbar — 账号头像圆框 ───────────────────────────────────── */
+.topbar-user {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  transform: translateY(-50%);
+}
+
+.topbar-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--theme-bar-text);
+  cursor: pointer;
+  background: var(--theme-card-bg);
+  border: 1.5px solid var(--theme-tag-border);
+  border-radius: 50%;
+  transition:
+    border-color var(--animal-motion-duration-fast, 0.15s),
+    box-shadow var(--animal-motion-duration-fast, 0.15s),
+    transform var(--animal-motion-duration-fast, 0.15s);
+}
+
+.topbar-avatar:hover {
+  border-color: var(--theme-bar-text);
+}
+
+.topbar-avatar:active {
+  transform: scale(0.94);
+}
+
+.topbar-avatar:focus-visible {
+  outline: 2px solid var(--theme-bar-text);
+  outline-offset: 2px;
+}
+
+/* 已登录态：外环变绿（后续接 Token 后启用） */
+.topbar-avatar--logged-in {
+  border-color: var(--theme-hint-ok-color);
+}
+
+.topbar-avatar__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* ── Topbar — 账号弹框（portal 到 body，fixed 定位避免被内容层遮挡） ── */
+.topbar-account {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  width: 320px;
+  padding: 14px;
+  background: var(--theme-card-bg);
+  border: 1.5px solid var(--theme-tag-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px var(--theme-card-shadow);
+}
+
+.account-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.account-panel__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+}
+
+.account-panel__close {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.account-panel__close:hover {
+  color: var(--theme-text-primary);
+  background: var(--theme-tag-bg);
+}
+
+.account-panel__input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--theme-text-primary);
+  outline: 0;
+  background: var(--theme-bg-primary);
+  border: 1.5px solid var(--theme-bar-border);
+  border-radius: 8px;
+  transition: border-color 0.15s;
+}
+
+.account-panel__input:focus {
+  border-color: var(--animal-primary-color);
+}
+
+.account-panel__hint {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--theme-text-muted);
+}
+
+.account-panel__link {
+  padding: 0;
+  font-size: 12px;
+  color: var(--theme-text-score);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.account-panel__link:hover {
+  text-decoration: underline;
+}
+
+.account-panel__note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--theme-text-muted);
+}
+
+/* 已登录视图（点击打开个人主页） */
+.account-panel__profile {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 4px;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.account-panel__profile:hover {
+  background: var(--theme-tag-bg);
+}
+
+.account-panel__profile:focus-visible {
+  outline: 2px solid var(--theme-text-primary);
+  outline-offset: 2px;
+}
+
+.account-panel__avatar {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  background: var(--theme-tag-bg);
+  border: 1.5px solid var(--theme-tag-border);
+  border-radius: 50%;
+}
+
+.account-panel__names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.account-panel__nickname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+  white-space: nowrap;
+}
+
+.account-panel__profile:hover .account-panel__nickname {
+  text-decoration: underline;
+}
+
+.account-panel__username {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--theme-text-muted);
+  white-space: nowrap;
+}
+
+.account-panel__logout {
+  padding: 6px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--theme-text-error);
+  cursor: pointer;
+  background: transparent;
+  border: 1.5px solid var(--theme-tag-border);
+  border-radius: 8px;
+  transition: border-color 0.15s;
+}
+
+.account-panel__logout:hover {
+  border-color: var(--theme-text-error);
+}
+
+.account-panel__error {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--theme-text-error);
+}
+
+.account-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.account-panel__submit {
+  padding: 6px 18px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--theme-text-on-accent);
+  cursor: pointer;
+  background: var(--animal-success-color);
+  border: 0;
+  border-radius: 8px;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+
+.account-panel__submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.account-panel__submit:hover:not(:disabled) {
+  background: var(--animal-success-color-hover);
+}
+
+.account-panel__submit--loading {
+  cursor: progress;
+  opacity: 0.7;
+}
+
 /* ── Sidebar / Navigation ────────────────────────────────────── */
 .sidebar {
   display: flex;
@@ -1343,6 +1611,66 @@ body,
   align-items: center;
 }
 
+/* ── 番剧名模糊搜索（第一阶段主入口） ───────────────────────── */
+
+/* 两行结构：番剧名搜索在上，年份 / 季度浏览在下。
+   右端对齐（flex-end）→ 两个搜索按钮落在同一条竖线上 */
+.query-search-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.query-keyword-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* 关键词输入框 — 高度与 Select trigger 对齐（45px） */
+.query-keyword-input {
+  box-sizing: border-box;
+  width: 290px;
+  height: 45px;
+  padding: 0 14px;
+  font-family: var(--theme-font);
+  font-size: 14px;
+  color: var(--theme-text-primary);
+  outline: 0;
+  background: var(--theme-bg-primary);
+  border: 2px solid var(--theme-input-border);
+  border-radius: 6px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.query-keyword-input::placeholder {
+  color: var(--theme-text-muted);
+}
+
+/* 聚焦：主题绿描边 + 一圈浅色外光，明确当前输入焦点 */
+.query-keyword-input:focus {
+  border-color: var(--animal-success-color);
+  box-shadow: 0 0 0 3px var(--theme-tag-bg);
+}
+
+.query-keyword-input:disabled {
+  color: var(--theme-text-muted);
+  cursor: not-allowed;
+  background: var(--theme-bar-bg);
+  border-color: var(--theme-bar-border);
+  opacity: 0.5;
+}
+
+/* 「或按年份季度浏览」分隔行 — 在整块宽度内居中 */
+.query-or-divider {
+  align-self: center;
+  font-family: var(--theme-font);
+  font-size: 12px;
+  color: var(--theme-text-muted);
+  user-select: none;
+}
+
 /*
  * 搜索按钮 — 绿色（animal-island-ui success 色系）
  * height: 40px + box-shadow 5px = 视觉 45px，与 Select trigger 对齐
@@ -1499,6 +1827,15 @@ body,
   margin-top: 12px;
   font-size: 14px;
   color: var(--theme-text-error);
+}
+
+/* 空结果提示（筛选后为空 / 关键字搜不到） */
+.query-empty-hint {
+  margin-top: 12px;
+  font-family: var(--theme-font);
+  font-size: 13px;
+  color: var(--theme-text-muted);
+  text-align: center;
 }
 
 /* ── Results ─────────────────────────────────────────────────── */
@@ -2358,6 +2695,36 @@ body,
   border-radius: 4px;
 }
 
+/* ── Multi-file groups (B 版可多选) ──────────────────────────── */
+.tw-sub-files {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: var(--theme-scrollbar) transparent;
+  scrollbar-width: thin;
+}
+
+.tw-sub-file {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--theme-tag-bg);
+  border: 1px solid var(--theme-tag-border);
+  border-radius: 6px;
+}
+
+.tw-sub-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  color: var(--theme-text-secondary);
+  white-space: nowrap;
+}
+
 /* ── Empty drop-zone ─────────────────────────────────────────── */
 .tw-empty {
   display: flex;
@@ -2401,6 +2768,11 @@ body,
   overflow-y: auto;
   scrollbar-color: var(--theme-scrollbar) transparent;
   scrollbar-width: thin;
+}
+
+/* 多文件分组内部由外层 .tw-sub-files 统一滚动 */
+.tw-sub-file .tw-track-list {
+  overflow: visible;
 }
 
 .tw-track {
