@@ -5,6 +5,7 @@
 | 工作流 | 文件 | 说明 |
 | --- | --- | --- |
 | Lint | [lint.yml](../../../.github/workflows/lint.yml) | 代码质量、格式、安全扫描 |
+| Release | [release.yml](../../../.github/workflows/release.yml) | 版本一致性校验、编译打包、创建 GitHub Release |
 | PR Review Command | [review-command.yml](../../../.github/workflows/review-command.yml) | AI 代码审查（`/review`、`/review-all` 命令） |
 
 ---
@@ -352,6 +353,34 @@ Lint 工作流中所有独立 job 通过后，`all-checks` 汇总 gate 将所有
 | `ls-lint` | 文件命名规范 |
 
 **机制**：使用 `if: always()` 确保 gate 始终运行，通过 `needs.*.result` 检查所有前置 job 的结果。任何 job 失败或取消时，gate 报错退出。此 gate 被配置为仓库的必需状态检查，必须通过方可合并 PR。
+
+---
+
+## Release 工作流
+
+由 [release.yml](../../../.github/workflows/release.yml) 定义，**不参与 PR 检查**：推送 `v*` tag 时触发，用于编译打包并发布安装包。
+
+### 触发与权限
+
+| 项 | 值 |
+| --- | --- |
+| 触发 | `push` tag `v*` |
+| 权限 | `contents: write`（创建 Release、上传产物） |
+| 运行环境 | `windows-2025-vs2026` |
+
+### 流程
+
+| 步骤 | 说明 |
+| --- | --- |
+| 版本一致性校验 | tag 去掉 `v` 前缀后的版本号，必须同时等于 `package.json` / `src-tauri/tauri.conf.json` / `src-tauri/Cargo.toml` 的 `version`，否则构建失败 |
+| Setup Node.js | Node 24 |
+| 安装前端依赖 | `yarn install --frozen-lockfile` |
+| Setup Rust + 缓存 | 安装 Rust 工具链，缓存 `src-tauri/target`（缓存 key 取 `Cargo.lock` 哈希） |
+| 下载 sidecar | 运行 `scripts/download-aria2.ps1`、`scripts/download-mkvmerge.ps1` |
+| 编译打包 | `yarn tauri:build` |
+| 创建 Release | `softprops/action-gh-release`，上传 `src-tauri/target/release/bundle/nsis/*.exe`，并自动生成 release notes |
+
+> 发版操作步骤见 [README 的发版流程](../../../README.md#发版流程)。
 
 ---
 

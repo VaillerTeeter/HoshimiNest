@@ -91,6 +91,14 @@ External binaries (`aria2c`, `mkvmerge`) are bundled via `externalBin` in `tauri
 
 Always handle `CommandEvent::Stdout`, `Stderr`, `Terminated`, and the `None` case in the event loop.
 
+### mkvmerge Merge Conventions
+
+Merge jobs must keep these invariants:
+
+- Emit `--no-chapters` **per input file** — it only applies to the file that follows it, so later inputs would keep their chapters otherwise.
+- Mark exactly one subtitle track as default (`--default-track-flag <id>:1`, every other subtitle `0`); A-side video / audio tracks are the defaults.
+- Clear track names (`--track-name <id>:`) and only pass `--language` when the label is non-empty — an empty label keeps the language of the source file.
+
 ## Compile-time Config
 
 Compile-time configuration lives in `src-tauri/app-config.json`. Embed it at compile time with `include_str!`:

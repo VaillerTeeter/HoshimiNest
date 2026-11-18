@@ -102,8 +102,8 @@ NEVER run `npm install` or `pnpm add`. Always use `yarn`.
 
 NEVER suggest re-installing these — already in `package.json`:
 
-- `@tauri-apps/api`, `@tauri-apps/plugin-dialog`, `@tauri-apps/plugin-opener`
-- `animal-island-ui`, `bangumi-api-client`
+- `@tauri-apps/api`, `@tauri-apps/plugin-dialog`, `@tauri-apps/plugin-notification`, `@tauri-apps/plugin-opener`
+- `animal-island-ui`, `bangumi-api-client`, `classnames`
 - `react`, `react-dom`
 
 ## Dev Commands

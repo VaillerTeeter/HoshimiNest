@@ -148,8 +148,8 @@ Only non-sensitive profile fields (id / username / nickname / avatarUrl) may be 
 
 NEVER suggest installing or re-installing these — already in `package.json`:
 
-- `@tauri-apps/api`, `@tauri-apps/plugin-dialog`, `@tauri-apps/plugin-opener`
-- `animal-island-ui`, `bangumi-api-client`
+- `@tauri-apps/api`, `@tauri-apps/plugin-dialog`, `@tauri-apps/plugin-notification`, `@tauri-apps/plugin-opener`
+- `animal-island-ui`, `bangumi-api-client`, `classnames`
 - `react`, `react-dom`
 
 Always invoke Tauri commands via `invoke()` from `@tauri-apps/api/core`. NEVER use other Tauri IPC methods.
