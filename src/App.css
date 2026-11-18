@@ -1611,6 +1611,66 @@ body,
   align-items: center;
 }
 
+/* ── 番剧名模糊搜索（第一阶段主入口） ───────────────────────── */
+
+/* 两行结构：番剧名搜索在上，年份 / 季度浏览在下。
+   右端对齐（flex-end）→ 两个搜索按钮落在同一条竖线上 */
+.query-search-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.query-keyword-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* 关键词输入框 — 高度与 Select trigger 对齐（45px） */
+.query-keyword-input {
+  box-sizing: border-box;
+  width: 290px;
+  height: 45px;
+  padding: 0 14px;
+  font-family: var(--theme-font);
+  font-size: 14px;
+  color: var(--theme-text-primary);
+  outline: 0;
+  background: var(--theme-bg-primary);
+  border: 2px solid var(--theme-input-border);
+  border-radius: 6px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.query-keyword-input::placeholder {
+  color: var(--theme-text-muted);
+}
+
+/* 聚焦：主题绿描边 + 一圈浅色外光，明确当前输入焦点 */
+.query-keyword-input:focus {
+  border-color: var(--animal-success-color);
+  box-shadow: 0 0 0 3px var(--theme-tag-bg);
+}
+
+.query-keyword-input:disabled {
+  color: var(--theme-text-muted);
+  cursor: not-allowed;
+  background: var(--theme-bar-bg);
+  border-color: var(--theme-bar-border);
+  opacity: 0.5;
+}
+
+/* 「或按年份季度浏览」分隔行 — 在整块宽度内居中 */
+.query-or-divider {
+  align-self: center;
+  font-family: var(--theme-font);
+  font-size: 12px;
+  color: var(--theme-text-muted);
+  user-select: none;
+}
+
 /*
  * 搜索按钮 — 绿色（animal-island-ui success 色系）
  * height: 40px + box-shadow 5px = 视觉 45px，与 Select trigger 对齐
@@ -1767,6 +1827,15 @@ body,
   margin-top: 12px;
   font-size: 14px;
   color: var(--theme-text-error);
+}
+
+/* 空结果提示（筛选后为空 / 关键字搜不到） */
+.query-empty-hint {
+  margin-top: 12px;
+  font-family: var(--theme-font);
+  font-size: 13px;
+  color: var(--theme-text-muted);
+  text-align: center;
 }
 
 /* ── Results ─────────────────────────────────────────────────── */

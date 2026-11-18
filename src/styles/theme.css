@@ -19,6 +19,7 @@
   --theme-tag-border:       #e8d8c0;    /* 标签边框 */
   --theme-white:            #fff;    /* 纯白，用于输入/预览框背景 */
   --theme-bg-primary:       #fff;    /* 输入框 / 表单控件背景（同白） */
+  --theme-input-border:     #cbb289;    /* 输入框边框（强于标签边框，保证可辨识） */
   --theme-bg-secondary:     #f5f5f5;    /* 次级背景（诊断行等轻量区块） */
 
   /* ── Text（文字色） ──────────────────────────── */

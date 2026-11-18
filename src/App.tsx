@@ -90,7 +90,7 @@ interface PageContentProps {
   page: PageKey;
   onLoadingChange: (v: boolean) => void;
   cancelRef: MutableRefObject<(() => void) | null>;
-  onTitleChange: (v: { yearSeason: string; count: number } | null) => void;
+  onTitleChange: (v: { label: string; count: number } | null) => void;
 }
 
 function PageContent({
@@ -158,7 +158,7 @@ function SideNav({ page, onNavigate }: SideNavProps): React.JSX.Element {
 interface TopbarTitleProps {
   currentLabel: string;
   page: PageKey;
-  queryTitleParts: { yearSeason: string; count: number } | null;
+  queryTitleParts: { label: string; count: number } | null;
 }
 
 function TopbarTitle({ currentLabel, page, queryTitleParts }: TopbarTitleProps): React.JSX.Element {
@@ -168,7 +168,7 @@ function TopbarTitle({ currentLabel, page, queryTitleParts }: TopbarTitleProps):
       {page === 'query' && queryTitleParts !== null && (
         <>
           {' '}
-          - <span className="topbar-highlight">{queryTitleParts.yearSeason}</span>番剧共
+          - <span className="topbar-highlight">{queryTitleParts.label}</span>番剧共
           <span className="topbar-highlight">{queryTitleParts.count}</span>部
         </>
       )}
@@ -294,7 +294,7 @@ function AppInner(): React.JSX.Element {
   const [page, setPage] = useState<PageKey>('query');
   const [isQueryLoading, setIsQueryLoading] = useState(false);
   const [queryTitleParts, setQueryTitleParts] = useState<{
-    yearSeason: string;
+    label: string;
     count: number;
   } | null>(null);
   const queryCancelRef = useRef<(() => void) | null>(null);
