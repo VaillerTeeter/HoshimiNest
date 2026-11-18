@@ -10,8 +10,8 @@ const TOKEN_URL = 'https://next.bgm.tv/demo/access-token';
 interface AccountPanelProps {
   /** 是否展开弹框 */
   open: boolean;
-  /** 头像按钮，用于计算弹框的固定定位坐标 */
-  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  /** 弹框的固定定位坐标；null 表示尚未测量（不渲染） */
+  pos: { left: number; top: number } | null;
   /** 登录用户画像；未登录为 null */
   profile: BgmProfile | null;
   /** 登录校验中 */
@@ -34,7 +34,6 @@ interface AccountPanelProps {
  * @param open - 弹框是否展开
  * @param onClose - 关闭回调
  * @param panelRef - 弹框根元素，用于判断点击是否落在面板内部
- * @returns 无
  */
 function usePanelDismiss(
   open: boolean,
@@ -202,7 +201,7 @@ function AccountProfile({ profile, refreshing, onLogout }: AccountProfileProps):
  */
 export default function AccountPanel({
   open,
-  anchorRef,
+  pos,
   profile,
   submitting = false,
   refreshing = false,
@@ -212,23 +211,8 @@ export default function AccountPanel({
   onClose,
 }: AccountPanelProps): React.JSX.Element | null {
   const [token, setToken] = useState<string>('');
-  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const panelRef = useRef<HTMLFormElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  // 依据头像按钮的位置，计算固定定位坐标（portal 渲染到 body，脱离顶栏层叠上下文）
-  useEffect(() => {
-    if (!open) {
-      setPos(null);
-      return;
-    }
-    const anchor = anchorRef.current;
-    if (anchor === null) {
-      return;
-    }
-    const rect = anchor.getBoundingClientRect();
-    setPos({ left: rect.left - 4, top: rect.bottom + 6 });
-  }, [open, anchorRef]);
 
   // 展开时自动聚焦输入框
   useEffect(() => {
@@ -265,9 +249,7 @@ export default function AccountPanel({
       onSubmit={handleSubmit}
     >
       <AccountHeader title={profile === null ? '登录 Bangumi' : 'Bangumi 账号'} onClose={onClose} />
-      {profile !== null ? (
-        <AccountProfile profile={profile} refreshing={refreshing} onLogout={onLogout} />
-      ) : (
+      {profile === null ? (
         <>
           <input
             ref={inputRef}
@@ -293,6 +275,8 @@ export default function AccountPanel({
             </button>
           </div>
         </>
+      ) : (
+        <AccountProfile profile={profile} refreshing={refreshing} onLogout={onLogout} />
       )}
     </form>,
     document.body,

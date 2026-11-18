@@ -333,13 +333,13 @@ body,
     background 0.15s;
 }
 
-.account-panel__submit:hover:not(:disabled) {
-  background: var(--animal-success-color-hover);
-}
-
 .account-panel__submit:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.account-panel__submit:hover:not(:disabled) {
+  background: var(--animal-success-color-hover);
 }
 
 .account-panel__submit--loading {

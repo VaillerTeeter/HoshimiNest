@@ -1,5 +1,5 @@
 import type { Subject } from 'bangumi-api-client';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { bgm } from '../../relay';
 import {
@@ -9,6 +9,7 @@ import {
   removeWatchEntry,
 } from '../../store/watchStore';
 
+import { fetchKeyword, keywordCache, normalizeKeyword, rememberKeyword } from './keywordSearch';
 import {
   type SeasonKey,
   seasonToMonths,
@@ -16,6 +17,7 @@ import {
   getAvailableSeasons,
   currentYear,
 } from './queryHelpers';
+import { SEARCH_CONCURRENCY, SEARCH_PAGE_SIZE } from './searchConstants';
 
 export function seasonLabel(s: SeasonKey): string {
   switch (s) {
@@ -80,12 +82,6 @@ async function fetchMonth(
 }
 
 // -- season search (POST /v0/search/subjects) --------------------------------
-
-/** Server-side page cap for POST /v0/search/subjects (larger values are ignored). */
-const SEARCH_PAGE_SIZE = 20;
-
-/** 4 parallel pages measured fastest (12 pages serial: 3.6 s, 3 batches of 4: ~1.05 s). */
-const SEARCH_CONCURRENCY = 4;
 
 /** Season results are stable enough to keep them for the whole session. */
 const seasonCache = new Map<string, Subject[]>();
@@ -269,102 +265,82 @@ export function useYearSeason(): YearSeasonState {
   return { year, season, setSeason, handleYearChange };
 }
 
-// -- keyword search (POST /v0/search/subjects with keyword) -------------------
-
-/** Keyword search page size (server caps at 20 per page). */
-const KEYWORD_PAGE_SIZE = SEARCH_PAGE_SIZE;
-
-/** Name lookups hit within the first pages — cap the sweep at 5 pages (100 entries). */
-const KEYWORD_MAX_PAGES = 5;
-
-/** Keyword results are stable enough to keep them for the whole session. */
-const keywordCache = new Map<string, Subject[]>();
-const KEYWORD_CACHE_LIMIT = 12;
-
-/**
- * Trim and collapse whitespace so `" 孤独  摇滚 "` and `"孤独 摇滚"` share one
- * cache entry (the api treats inner whitespace as a term separator).
- *
- * @param keyword - Raw user input
- * @returns Normalized keyword
- */
-function normalizeKeyword(keyword: string): string {
-  return keyword.trim().replace(/\s+/g, ' ');
-}
-
-function rememberKeyword(keyword: string, subjects: Subject[]): void {
-  keywordCache.delete(keyword);
-  keywordCache.set(keyword, subjects);
-  if (keywordCache.size > KEYWORD_CACHE_LIMIT) {
-    const [oldest] = keywordCache.keys();
-    if (oldest !== undefined) {
-      keywordCache.delete(oldest);
-    }
-  }
-}
-
-/**
- * Fuzzy-search anime subjects by name (chinese name, original name or alias).
- *
- * Unlike the season loader this keeps the server-side relevance order
- * (`sort: 'match'`), so results are NOT re-sorted by air date. The first page
- * is emitted immediately, the remaining pages are fetched with the same
- * concurrency as the season loader, capped at {@link KEYWORD_MAX_PAGES}.
- *
- * @param keyword - Normalized keyword
- * @param isCancelled - Callback returning true when the request was cancelled
- * @param onPartial - Callback invoked with the partial result list
- * @returns All (capped) subjects matching the keyword
- */
-async function fetchKeyword(
-  keyword: string,
-  isCancelled: () => boolean,
-  onPartial: (subjects: Subject[]) => void,
-): Promise<Subject[]> {
-  const collected: Subject[] = [];
-  const seen = new Set<number>();
-
-  const loadPage = async (offset: number): Promise<number> => {
-    const res = await bgm.subjects.searchSubjects({
-      keyword,
-      filter: { type: [2] },
-      sort: 'match',
-      limit: KEYWORD_PAGE_SIZE,
-      offset,
-    });
-    if (res.data === undefined) {
-      throw new Error('searchSubjects returned no data');
-    }
-    const fresh = res.data.data.filter((item) => !seen.has(item.id));
-    for (const item of fresh) {
-      seen.add(item.id);
-    }
-    collected.push(...fresh);
-    return res.data.total;
-  };
-
-  const total = await loadPage(0);
-  onPartial([...collected]);
-
-  const cap = Math.min(total, KEYWORD_PAGE_SIZE * KEYWORD_MAX_PAGES);
-  const offsets: number[] = [];
-  for (let offset = KEYWORD_PAGE_SIZE; offset < cap; offset += KEYWORD_PAGE_SIZE) {
-    offsets.push(offset);
-  }
-
-  for (let index = 0; index < offsets.length; index += SEARCH_CONCURRENCY) {
-    if (isCancelled()) {
-      break;
-    }
-    const batch = offsets.slice(index, index + SEARCH_CONCURRENCY);
-    await Promise.all(batch.map((offset) => loadPage(offset)));
-    onPartial([...collected]);
-  }
-
-  return collected;
-}
-
 // ── useQuerySearch ───────────────────────────────────────────────────────────
+
+/** State setters plus overlay hooks shared by every query-page search. */
+interface SearchUi {
+  setIsLoading: (loading: boolean) => void;
+  setResults: (results: Subject[]) => void;
+  setSearchError: (error: string | null) => void;
+  setSearchEmpty: (empty: boolean) => void;
+  onLoadingChange: ((loading: boolean) => void) | undefined;
+  cancelRef: { current: (() => void) | null } | undefined;
+}
+
+/**
+ * 共用的搜索生命周期：遮罩（onLoadingChange）/ 计时 / 取消（cancelRef）/
+ * 错误提示全部集中在这里，季度搜索与关键字搜索共用同一套过场动画。
+ *
+ * @param ui - 状态设置函数与遮罩 / 取消的接入点
+ * @param task - 具体的数据加载逻辑，通过参数拿到取消判定与局部结果回调
+ */
+async function runSearch(
+  ui: SearchUi,
+  task: (isCancelled: () => boolean, onPartial: (subjects: Subject[]) => void) => Promise<void>,
+): Promise<void> {
+  const {
+    setIsLoading,
+    setResults,
+    setSearchError,
+    setSearchEmpty,
+    onLoadingChange,
+    cancelRef,
+  } = ui;
+  setIsLoading(true);
+  onLoadingChange?.(true);
+  setResults([]);
+  setSearchError(null);
+  setSearchEmpty(false);
+  const cancelledRef = { cancelled: false };
+  const cancel = (): void => {
+    cancelledRef.cancelled = true;
+    setIsLoading(false);
+    onLoadingChange?.(false);
+    if (cancelRef !== undefined) {
+      cancelRef.current = null;
+    }
+  };
+  if (cancelRef !== undefined) {
+    cancelRef.current = cancel;
+  }
+  let loaded = 0;
+  try {
+    await task(
+      () => cancelledRef.cancelled,
+      (partial) => {
+        loaded = partial.length;
+        if (!cancelledRef.cancelled) {
+          setResults(partial);
+        }
+      },
+    );
+    if (!cancelledRef.cancelled) {
+      setSearchEmpty(loaded === 0);
+    }
+  } catch {
+    if (!cancelledRef.cancelled) {
+      setSearchError('搜索失败，请稍后重试');
+    }
+  } finally {
+    if (!cancelledRef.cancelled) {
+      if (cancelRef !== undefined) {
+        cancelRef.current = null;
+      }
+      setIsLoading(false);
+      onLoadingChange?.(false);
+    }
+  }
+}
 
 /** Which data source produced the current result list. */
 export type QueryMode = 'season' | 'keyword';
@@ -400,61 +376,14 @@ export function useQuerySearch(
   const [activeKeyword, setActiveKeyword] = useState('');
   const [searchEmpty, setSearchEmpty] = useState(false);
 
-  /**
-   * 共用的搜索生命周期：遮罩（onLoadingChange）/ 计时 / 取消（cancelRef）/
-   * 错误提示全部集中在这里，季度搜索与关键字搜索共用同一套过场动画。
-   *
-   * @param task - 具体的数据加载逻辑，通过参数拿到取消判定与局部结果回调
-   * @returns Nothing - 状态通过 setState 更新
-   */
-  async function runSearch(
-    task: (isCancelled: () => boolean, onPartial: (subjects: Subject[]) => void) => Promise<void>,
-  ): Promise<void> {
-    setIsLoading(true);
-    onLoadingChange?.(true);
-    setResults([]);
-    setSearchError(null);
-    setSearchEmpty(false);
-    const cancelledRef = { cancelled: false };
-    const cancel = (): void => {
-      cancelledRef.cancelled = true;
-      setIsLoading(false);
-      onLoadingChange?.(false);
-      if (cancelRef !== undefined) {
-        cancelRef.current = null;
-      }
-    };
-    if (cancelRef !== undefined) {
-      cancelRef.current = cancel;
-    }
-    let loaded = 0;
-    try {
-      await task(
-        () => cancelledRef.cancelled,
-        (partial) => {
-          loaded = partial.length;
-          if (!cancelledRef.cancelled) {
-            setResults(partial);
-          }
-        },
-      );
-      if (!cancelledRef.cancelled) {
-        setSearchEmpty(loaded === 0);
-      }
-    } catch {
-      if (!cancelledRef.cancelled) {
-        setSearchError('搜索失败，请稍后重试');
-      }
-    } finally {
-      if (!cancelledRef.cancelled) {
-        if (cancelRef !== undefined) {
-          cancelRef.current = null;
-        }
-        setIsLoading(false);
-        onLoadingChange?.(false);
-      }
-    }
-  }
+  const searchUi: SearchUi = {
+    setIsLoading,
+    setResults,
+    setSearchError,
+    setSearchEmpty,
+    onLoadingChange,
+    cancelRef,
+  };
 
   async function handleSearch(resetFilters: () => void): Promise<void> {
     setMode('season');
@@ -462,7 +391,7 @@ export function useQuerySearch(
     resetFilters();
     const yearNum = Number(year);
     const cacheKey = `${String(yearNum)}-${season}`;
-    await runSearch(async (isCancelled, onPartial) => {
+    await runSearch(searchUi, async (isCancelled, onPartial) => {
       const cached = seasonCache.get(cacheKey);
       if (cached === undefined) {
         await loadSeason(yearNum, season, cacheKey, isCancelled, onPartial);
@@ -480,7 +409,7 @@ export function useQuerySearch(
     setMode('keyword');
     setActiveKeyword(normalized);
     resetFilters();
-    await runSearch(async (isCancelled, onPartial) => {
+    await runSearch(searchUi, async (isCancelled, onPartial) => {
       const cached = keywordCache.get(normalized);
       if (cached === undefined) {
         const subjects = await fetchKeyword(normalized, isCancelled, onPartial);
@@ -564,94 +493,6 @@ export function useFilterState(): FilterState {
     setFilterAudiences,
     resetFilters,
   };
-}
-
-// ── useFilteredSubjects ──────────────────────────────────────────────────────
-
-/** The filter values used for computing filtered results. */
-interface FilterSets {
-  filterMonths: Set<string>;
-  filterPlatforms: Set<string>;
-  filterSources: Set<string>;
-  filterGenres: Set<string>;
-  filterRegions: Set<string>;
-  filterAudiences: Set<string>;
-}
-
-function matchesMonth(date: string | undefined | null, filterMonths: Set<string>): boolean {
-  if (date === undefined || date === null || date === '') {
-    return false;
-  }
-  const parts = date.split('-');
-  const [, monthPart] = parts;
-  const m = String(Number.parseInt(monthPart ?? '0', 10));
-  return filterMonths.has(m);
-}
-
-function matchesPlatform(platform: string | undefined, filterPlatforms: Set<string>): boolean {
-  return platform !== undefined && platform !== '' && filterPlatforms.has(platform);
-}
-
-function matchesTagFilters(
-  tagNames: Set<string>,
-  filterSources: Set<string>,
-  filterGenres: Set<string>,
-  filterRegions: Set<string>,
-  filterAudiences: Set<string>,
-): boolean {
-  const passesSource = filterSources.size === 0 || [...filterSources].some((s) => tagNames.has(s));
-  const passesGenre = filterGenres.size === 0 || [...filterGenres].some((g) => tagNames.has(g));
-  const passesRegion = filterRegions.size === 0 || [...filterRegions].some((r) => tagNames.has(r));
-  const passesAudience =
-    filterAudiences.size === 0 || [...filterAudiences].some((a) => tagNames.has(a));
-  return passesSource && passesGenre && passesRegion && passesAudience;
-}
-
-export function useFilteredSubjects(results: Subject[], filters: FilterSets): Subject[] {
-  const {
-    filterMonths,
-    filterPlatforms,
-    filterSources,
-    filterGenres,
-    filterRegions,
-    filterAudiences,
-  } = filters;
-
-  return useMemo<Subject[]>(() => {
-    if (results.length === 0) {
-      return results;
-    }
-    return results.filter((item) => {
-      if (filterMonths.size > 0 && !matchesMonth(item.date, filterMonths)) {
-        return false;
-      }
-      if (filterPlatforms.size > 0 && !matchesPlatform(item.platform, filterPlatforms)) {
-        return false;
-      }
-      if (
-        filterSources.size > 0 ||
-        filterGenres.size > 0 ||
-        filterRegions.size > 0 ||
-        filterAudiences.size > 0
-      ) {
-        const tagNames = new Set(item.tags.map((t) => t.name));
-        if (
-          !matchesTagFilters(tagNames, filterSources, filterGenres, filterRegions, filterAudiences)
-        ) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [
-    results,
-    filterMonths,
-    filterPlatforms,
-    filterSources,
-    filterGenres,
-    filterRegions,
-    filterAudiences,
-  ]);
 }
 
 // ── useWatchStatus ───────────────────────────────────────────────────────────

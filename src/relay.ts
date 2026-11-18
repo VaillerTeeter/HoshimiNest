@@ -68,7 +68,6 @@ export const bgm = createBangumiClient({
  * Set or clear the Authorization header of the shared client.
  *
  * @param token - Access token; pass null to clear it (anonymous requests)
- * @returns Nothing
  */
 export function applyBgmToken(token: string | null): void {
   bgm._client.setConfig({

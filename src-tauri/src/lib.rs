@@ -1021,11 +1021,12 @@ fn win_dpapi_encrypt(plain: &[u8]) -> Result<Vec<u8>, String> {
         return Err(format!("DPAPI 加密失败: {err}"));
     }
 
+    let ptr = out_blob.pb_data;
+    let out_len = out_blob.cb_data as usize;
     // SAFETY: on success the API allocated out_blob.pb_data with LocalAlloc and
     // wrote out_blob.cb_data bytes into it.
     // nosemgrep: rust-unsafe-block
-    let cipher =
-        unsafe { std::slice::from_raw_parts(out_blob.pb_data, out_blob.cb_data as usize) }.to_vec();
+    let cipher = unsafe { std::slice::from_raw_parts(ptr, out_len) }.to_vec();
     // SAFETY: the buffer was allocated by CryptProtectData and must be released
     // with LocalFree.
     // nosemgrep: rust-unsafe-block
@@ -1067,11 +1068,12 @@ fn win_dpapi_decrypt(cipher: &[u8]) -> Result<Vec<u8>, String> {
         return Err(format!("DPAPI 解密失败: {err}"));
     }
 
+    let ptr = out_blob.pb_data;
+    let out_len = out_blob.cb_data as usize;
     // SAFETY: on success the API allocated out_blob.pb_data with LocalAlloc and
     // wrote out_blob.cb_data bytes into it.
     // nosemgrep: rust-unsafe-block
-    let plain =
-        unsafe { std::slice::from_raw_parts(out_blob.pb_data, out_blob.cb_data as usize) }.to_vec();
+    let plain = unsafe { std::slice::from_raw_parts(ptr, out_len) }.to_vec();
     // SAFETY: the buffer was allocated by CryptUnprotectData and must be
     // released with LocalFree.
     // nosemgrep: rust-unsafe-block

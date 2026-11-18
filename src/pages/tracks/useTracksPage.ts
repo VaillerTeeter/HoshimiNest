@@ -77,7 +77,12 @@ async function identifyTracks(path: string): Promise<SelectedTrack[]> {
   return invoke<SelectedTrack[]>('identify_tracks', { path });
 }
 
-/** A 版：单选文件，首次选择时顺带推断输出目录与输出文件名 */
+/**
+ * A 版：单选文件，首次选择时顺带推断输出目录与输出文件名。
+ *
+ * @param setDraft - draft 状态设置函数
+ * @param setFileLoading - 文件识别 loading 标志设置函数
+ */
 async function pickFileAOp(
   setDraft: Dispatch<SetStateAction<DraftState>>,
   setFileLoading: Dispatch<SetStateAction<{ a: boolean; b: boolean }>>,
@@ -108,7 +113,12 @@ async function pickFileAOp(
   }
 }
 
-/** B 版：一次可选多个字幕 / 附加文件，重复选择整体替换 */
+/**
+ * B 版：一次可选多个字幕 / 附加文件，重复选择整体替换。
+ *
+ * @param setDraft - draft 状态设置函数
+ * @param setFileLoading - 文件识别 loading 标志设置函数
+ */
 async function pickFileBOp(
   setDraft: Dispatch<SetStateAction<DraftState>>,
   setFileLoading: Dispatch<SetStateAction<{ a: boolean; b: boolean }>>,
@@ -127,16 +137,18 @@ async function pickFileBOp(
   }
   setFileLoading((prev) => ({ ...prev, b: true }));
   try {
-    const files: FileState[] = [];
-    for (const path of paths) {
-      const name = fileNameOf(path);
-      try {
-        files.push({ path, name, tracks: applyDefaults(await identifyTracks(path), 'b') });
-      } catch (error: unknown) {
-        files.push({ path, name, tracks: [] });
-        void Promise.reject(new Error(String(error)));
-      }
-    }
+    const files = await Promise.all(
+      paths.map(async (path) => {
+        const name = fileNameOf(path);
+        try {
+          const tracks = applyDefaults(await identifyTracks(path), 'b');
+          return { path, name, tracks };
+        } catch (error: unknown) {
+          void Promise.reject(new Error(String(error)));
+          return { path, name, tracks: [] };
+        }
+      }),
+    );
     setDraft((prev) => ({ ...prev, fileB: applySubtitleLabels(files) }));
   } finally {
     setFileLoading((prev) => ({ ...prev, b: false }));

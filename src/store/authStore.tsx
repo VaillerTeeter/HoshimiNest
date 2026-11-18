@@ -81,7 +81,6 @@ function loadCachedProfile(): BgmProfile | null {
  * 写出 / 清除个人资料缓存。
  *
  * @param profile - 要缓存的资料；传 null 清除缓存
- * @returns Nothing
  */
 function cacheProfile(profile: BgmProfile | null): void {
   if (profile === null) {
@@ -143,23 +142,24 @@ function probeMessage(result: ProfileProbe): string {
  *
  * @param setProfile - profile 状态设置函数
  * @param tokenRef - 内存中的 token 引用（供后续刷新复用）
- * @returns Nothing
  */
 function useSessionRestore(
   setProfile: Dispatch<SetStateAction<BgmProfile | null>>,
   tokenRef: MutableRefObject<string | null>,
 ): void {
   useEffect(() => {
-    let cancelled = false;
+    // 用对象 flag 而非 `let cancelled`：后者在 IIFE 内会被 TypeScript 收窄成
+    // 恒为 false（赋值只发生在后面声明的 cleanup 闭包里），触发 no-unnecessary-condition。
+    const state = { cancelled: false };
     void (async () => {
       const token = await loadToken();
-      if (cancelled || token === null) {
+      if (state.cancelled || token === null) {
         return;
       }
       tokenRef.current = token;
       applyBgmToken(token);
       const result = await probeToken(token);
-      if (cancelled) {
+      if (state.cancelled) {
         return;
       }
       if (result.kind === 'ok') {
@@ -176,7 +176,7 @@ function useSessionRestore(
       }
     })();
     return () => {
-      cancelled = true;
+      state.cancelled = true;
     };
   }, [setProfile, tokenRef]);
 }
@@ -211,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
 
   const login = useCallback(async (rawToken: string): Promise<void> => {
     const token = rawToken.trim();
-    if (token === '') {
+    if (token.length === 0) {
       return;
     }
     setSubmitting(true);
@@ -227,8 +227,8 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
       tokenRef.current = token;
       setProfile(result.profile);
       cacheProfile(result.profile);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '本地保存登录信息失败');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : '本地保存登录信息失败');
     } finally {
       setSubmitting(false);
     }
@@ -245,10 +245,10 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
 
   // 面板打开时调用：网页改了头像/昵称后无需重启即可同步
   const refresh = useCallback(async (): Promise<void> => {
-    const token = tokenRef.current;
-    if (token === null) {
+    if (tokenRef.current === null) {
       return;
     }
+    const token = tokenRef.current;
     setRefreshing(true);
     try {
       const result = await probeToken(token);

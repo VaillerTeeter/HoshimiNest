@@ -185,7 +185,9 @@ function TopbarTitle({ currentLabel, page, queryTitleParts }: TopbarTitleProps):
  * @returns 圆形头像按钮 + 账号弹框
  */
 function TopbarUser(): React.JSX.Element {
-  const [accountOpen, setAccountOpen] = useState(false);
+  // 弹框位置在点击时测量（事件驱动），避免用 effect 在 prop 变化后回写 state
+  const [accountPos, setAccountPos] = useState<{ left: number; top: number } | null>(null);
+  const accountOpen = accountPos !== null;
   const avatarRef = useRef<HTMLButtonElement | null>(null);
   const { profile, submitting, refreshing, error, login, logout, refresh } = useAuth();
 
@@ -197,7 +199,7 @@ function TopbarUser(): React.JSX.Element {
   }, [accountOpen, refresh]);
 
   const handleAccountClose = useCallback((): void => {
-    setAccountOpen(false);
+    setAccountPos(null);
   }, []);
 
   const handleLogin = useCallback(
@@ -222,7 +224,16 @@ function TopbarUser(): React.JSX.Element {
         aria-haspopup="dialog"
         aria-expanded={accountOpen}
         onClick={() => {
-          setAccountOpen((prev) => !prev);
+          setAccountPos((prev) => {
+            if (prev !== null) {
+              return null;
+            }
+            const rect = avatarRef.current?.getBoundingClientRect();
+            if (rect === undefined) {
+              return null;
+            }
+            return { left: rect.left - 4, top: rect.bottom + 6 };
+          });
         }}
       >
         {profile !== null && profile.avatarUrl !== '' ? (
@@ -240,7 +251,7 @@ function TopbarUser(): React.JSX.Element {
       </button>
       <AccountPanel
         open={accountOpen}
-        anchorRef={avatarRef}
+        pos={accountPos}
         profile={profile}
         submitting={submitting}
         refreshing={refreshing}
