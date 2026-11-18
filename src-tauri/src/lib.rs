@@ -505,7 +505,8 @@ struct MergeFileReq {
 struct MergeJobReq {
     id: String,
     file_a: MergeFileReq,
-    file_b: MergeFileReq,
+    /// B 版：字幕 / 附加文件，可 0..N（前端一次多选后整体替换）
+    file_b: Vec<MergeFileReq>,
     output_dir: String,
     output_name: String
 }
@@ -535,11 +536,13 @@ struct MergeQueueDoneEvt {
 // ── mkvmerge helpers ──────────────────────────────────────────────────────
 
 /// Mutable state shared across `push_file_track_args` calls within a single
-/// merge job.  Grouping the two mutable references into one struct keeps the
-/// argument count under the clippy threshold.
+/// merge job.  Grouping the shared state into one struct keeps the argument
+/// count under the clippy threshold.
 struct MergeCtx<'a> {
     args: &'a mut Vec<String>,
-    track_order: &'a mut Vec<String>
+    track_order: &'a mut Vec<String>,
+    /// 应作为默认字幕轨的 (文件序号, 轨道 id)；None 表示没有选中字幕
+    subtitle_default: Option<(usize, u32)>
 }
 
 /// 为单个输入文件拼接按轨道类型分组的选择参数（替代已弃用的 --tracks）
@@ -550,6 +553,9 @@ fn push_file_track_args(
     job_id: &str,
     role: &str
 ) {
+    // --no-chapters 是「每个输入文件」选项，只对紧随其后的输入生效；
+    // 因此每个输入都要带一次，否则 B 槽里重复出现的同一文件仍会把章节带进来。
+    ctx.args.push("--no-chapters".to_string());
     for (type_str, flag_sel, flag_none) in [
         ("video", "--video-tracks", "--no-video"),
         ("audio", "--audio-tracks", "--no-audio"),
@@ -587,42 +593,87 @@ fn push_file_track_args(
                 // 使用 --track-name ID: 将名称置为空字符串
                 ctx.args.push("--track-name".to_string());
                 ctx.args.push(format!("{}:", t.id));
+                // 默认轨道：A 区的视频 / 音频全部默认；字幕只让预先算好的那条为默认，
+                // 其余显式置 0，避免多个 default 字幕轨同时存在。
+                let is_default = match type_str {
+                    "video" | "audio" => file_idx == 0,
+                    _ => ctx.subtitle_default == Some((file_idx, t.id))
+                };
+                let default_flag = if is_default {
+                    1
+                } else {
+                    0
+                };
+                ctx.args.push("--default-track-flag".to_string());
+                ctx.args.push(format!("{}:{}", t.id, default_flag));
                 ctx.track_order.push(format!("{}:{}", file_idx, t.id));
             }
         }
     }
 }
 
+/// 选中字幕里谁是默认轨：只有一条时就是它；多条时取标签为 `zh-Hans` 的那条，
+/// 没有 `zh-Hans` 标签时退回第一条选中字幕。
+fn resolve_subtitle_default(job: &MergeJobReq) -> Option<(usize, u32)> {
+    let mut first: Option<(usize, u32)> = None;
+    let mut hans: Option<(usize, u32)> = None;
+    let mut count = 0_usize;
+
+    let groups = std::iter::once((0_usize, job.file_a.tracks.as_slice()))
+        .chain(job.file_b.iter().enumerate().map(|(idx, file)| (idx + 1, file.tracks.as_slice())));
+
+    for (file_idx, tracks) in groups {
+        for t in tracks.iter().filter(|t| t.selected && t.track_type == "subtitle") {
+            count += 1;
+            if first.is_none() {
+                first = Some((file_idx, t.id));
+            }
+            if hans.is_none() && t.label == "zh-Hans" {
+                hans = Some((file_idx, t.id));
+            }
+        }
+    }
+
+    if count <= 1 {
+        first
+    } else {
+        hans.or(first)
+    }
+}
+
 fn build_mkvmerge_args(job: &MergeJobReq) -> Result<Vec<String>, String> {
     let path_a = job.file_a.path.as_deref().ok_or("fileA path is missing")?;
-    let path_b = job.file_b.path.as_deref().ok_or("fileB path is missing")?;
 
     debug!(
-        "[merge][{}] A={:?}({} tracks) B={:?}({} tracks)",
+        "[merge][{}] A={:?}({} tracks) B={} file(s)",
         job.id,
         path_a,
         job.file_a.tracks.len(),
-        path_b,
-        job.file_b.tracks.len()
+        job.file_b.len()
     );
 
     let out_path = std::path::Path::new(&job.output_dir).join(&job.output_name);
+    // 章节在 push_file_track_args 里按输入文件逐个关闭（--no-chapters 是单文件选项）
     let mut args = vec!["-o".to_string(), out_path.to_string_lossy().to_string()];
     info!("[merge][{}] 输出: {:?}", job.id, out_path);
 
     let mut track_order: Vec<String> = Vec::new();
     let mut ctx = MergeCtx {
         args: &mut args,
-        track_order: &mut track_order
+        track_order: &mut track_order,
+        subtitle_default: resolve_subtitle_default(job)
     };
 
     // ── File A ──
     push_file_track_args(&mut ctx, &job.file_a.tracks, 0, &job.id, "fileA");
     ctx.args.push(path_a.to_string());
 
-    // ── File B ──
-    push_file_track_args(&mut ctx, &job.file_b.tracks, 1, &job.id, "fileB");
-    ctx.args.push(path_b.to_string());
+    // ── File B（字幕 / 附加文件，可 0..N）──
+    for (idx, file_b) in job.file_b.iter().enumerate() {
+        let path_b = file_b.path.as_deref().ok_or("fileB path is missing")?;
+        push_file_track_args(&mut ctx, &file_b.tracks, idx + 1, &job.id, "fileB");
+        ctx.args.push(path_b.to_string());
+    }
 
     // ── Track order ──
     if !ctx.track_order.is_empty() {

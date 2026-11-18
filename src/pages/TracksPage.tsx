@@ -289,7 +289,8 @@ function QueuePanel({
 interface FilePanelsRowProps {
   draft: TracksHookResult['draft'];
   fileLoading: TracksHookResult['fileLoading'];
-  pickFile: TracksHookResult['pickFile'];
+  pickFileA: TracksHookResult['pickFileA'];
+  pickFileB: TracksHookResult['pickFileB'];
   updateTrack: TracksHookResult['updateTrack'];
   moveTrack: TracksHookResult['moveTrack'];
 }
@@ -297,7 +298,8 @@ interface FilePanelsRowProps {
 function FilePanelsRow({
   draft,
   fileLoading,
-  pickFile,
+  pickFileA,
+  pickFileB,
   updateTrack,
   moveTrack,
 }: FilePanelsRowProps): React.JSX.Element {
@@ -305,30 +307,30 @@ function FilePanelsRow({
     <div className="tw-panels">
       <FilePanel
         side="a"
-        file={draft.fileA}
+        files={draft.fileA.path === null ? [] : [draft.fileA]}
         onPickFile={() => {
-          void pickFile('a');
+          void pickFileA();
         }}
-        onUpdateTrack={(id, patch) => {
-          updateTrack('a', id, patch);
+        onUpdateTrack={(fileIndex, id, patch) => {
+          updateTrack('a', fileIndex, id, patch);
         }}
-        onMoveTrack={(id, dir) => {
-          moveTrack('a', id, dir);
+        onMoveTrack={(fileIndex, id, dir) => {
+          moveTrack('a', fileIndex, id, dir);
         }}
         loading={fileLoading.a}
       />
       <div className="tw-divider" />
       <FilePanel
         side="b"
-        file={draft.fileB}
+        files={draft.fileB}
         onPickFile={() => {
-          void pickFile('b');
+          void pickFileB();
         }}
-        onUpdateTrack={(id, patch) => {
-          updateTrack('b', id, patch);
+        onUpdateTrack={(fileIndex, id, patch) => {
+          updateTrack('b', fileIndex, id, patch);
         }}
-        onMoveTrack={(id, dir) => {
-          moveTrack('b', id, dir);
+        onMoveTrack={(fileIndex, id, dir) => {
+          moveTrack('b', fileIndex, id, dir);
         }}
         loading={fileLoading.b}
       />
@@ -342,7 +344,8 @@ interface EditorPanelProps {
   editingJobId: string | null;
   jobs: MergeJob[];
   canSubmit: boolean;
-  pickFile: TracksHookResult['pickFile'];
+  pickFileA: TracksHookResult['pickFileA'];
+  pickFileB: TracksHookResult['pickFileB'];
   updateTrack: TracksHookResult['updateTrack'];
   moveTrack: TracksHookResult['moveTrack'];
   pickOutputDir: TracksHookResult['pickOutputDir'];
@@ -358,7 +361,8 @@ function EditorPanel({
   editingJobId,
   jobs,
   canSubmit,
-  pickFile,
+  pickFileA,
+  pickFileB,
   updateTrack,
   moveTrack,
   pickOutputDir,
@@ -372,7 +376,8 @@ function EditorPanel({
       <FilePanelsRow
         draft={draft}
         fileLoading={fileLoading}
-        pickFile={pickFile}
+        pickFileA={pickFileA}
+        pickFileB={pickFileB}
         updateTrack={updateTrack}
         moveTrack={moveTrack}
       />
@@ -404,7 +409,8 @@ export default function TracksPage(): React.JSX.Element {
     canSubmit,
     startNewDraft,
     loadJobIntoDraft,
-    pickFile,
+    pickFileA,
+    pickFileB,
     pickOutputDir,
     updateTrack,
     moveTrack,
@@ -437,7 +443,8 @@ export default function TracksPage(): React.JSX.Element {
         editingJobId={editingJobId}
         jobs={jobs}
         canSubmit={canSubmit}
-        pickFile={pickFile}
+        pickFileA={pickFileA}
+        pickFileB={pickFileB}
         updateTrack={updateTrack}
         moveTrack={moveTrack}
         pickOutputDir={pickOutputDir}

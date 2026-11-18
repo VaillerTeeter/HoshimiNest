@@ -2626,6 +2626,36 @@ body,
   border-radius: 4px;
 }
 
+/* ── Multi-file groups (B 版可多选) ──────────────────────────── */
+.tw-sub-files {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: var(--theme-scrollbar) transparent;
+  scrollbar-width: thin;
+}
+
+.tw-sub-file {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--theme-tag-bg);
+  border: 1px solid var(--theme-tag-border);
+  border-radius: 6px;
+}
+
+.tw-sub-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  color: var(--theme-text-secondary);
+  white-space: nowrap;
+}
+
 /* ── Empty drop-zone ─────────────────────────────────────────── */
 .tw-empty {
   display: flex;
@@ -2669,6 +2699,11 @@ body,
   overflow-y: auto;
   scrollbar-color: var(--theme-scrollbar) transparent;
   scrollbar-width: thin;
+}
+
+/* 多文件分组内部由外层 .tw-sub-files 统一滚动 */
+.tw-sub-file .tw-track-list {
+  overflow: visible;
 }
 
 .tw-track {

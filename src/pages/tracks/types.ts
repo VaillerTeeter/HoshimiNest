@@ -23,7 +23,8 @@ export interface FileState {
 
 export interface DraftState {
   fileA: FileState;
-  fileB: FileState;
+  /** B 版：字幕 / 附加文件，可 0..N（一次多选后整体替换） */
+  fileB: FileState[];
   outputDir: string | null;
   outputName: string;
 }
@@ -31,7 +32,7 @@ export interface DraftState {
 export interface MergeJob {
   id: string;
   fileA: FileState;
-  fileB: FileState;
+  fileB: FileState[];
   outputDir: string;
   outputName: string;
   status: JobStatus;

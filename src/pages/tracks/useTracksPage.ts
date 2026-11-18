@@ -3,61 +3,143 @@ import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 
-import { DEFAULT_SELECTED_A, DEFAULT_SELECTED_B, EMPTY_DRAFT } from './constants';
-import type { DraftState, JobStatus, MergeJob, SelectedTrack } from './types';
+import {
+  DEFAULT_SELECTED_A,
+  DEFAULT_SELECTED_B,
+  EMPTY_DRAFT,
+  MEDIA_EXTENSIONS,
+  SUBTITLE_EXTENSIONS,
+  VIDEO_EXTENSIONS,
+} from './constants';
+import type { DraftState, FileState, JobStatus, MergeJob, SelectedTrack } from './types';
 
 function genId(): string {
   return crypto.randomUUID().slice(0, 8);
 }
 
 function applyDefaults(tracks: SelectedTrack[], role: 'a' | 'b'): SelectedTrack[] {
+  // 纯字幕文件（例如 A 槽选了 .ass）默认全部勾选，否则按角色的轨道类型默认值处理
+  const subtitleOnly = tracks.length > 0 && tracks.every((t) => t.type === 'subtitle');
+  if (subtitleOnly) {
+    return tracks.map((t) => ({ ...t, selected: true }));
+  }
   const defaults = role === 'a' ? DEFAULT_SELECTED_A : DEFAULT_SELECTED_B;
   return tracks.map((t) => ({ ...t, selected: defaults[t.type] }));
 }
 
-// ── extracted async file-pick handler ────────────────────────────────────────
+/**
+ * B 版字幕轨默认标签：按文件顺序与文件内轨道顺序——第 1 条 zh-Hans、第 2 条 zh-Hant，其余留空。
+ *
+ * A 版不参与编号（A 的字幕标签沿用后端默认值），空标签在合并时不会下发
+ * `--language`，即保留源文件自带的语言。
+ *
+ * @param files - B 版所选文件
+ * @returns 应用了字幕默认标签的文件列表
+ */
+function applySubtitleLabels(files: FileState[]): FileState[] {
+  let index = 0;
+  return files.map((file) => ({
+    ...file,
+    tracks: file.tracks.map((track) => {
+      if (track.type !== 'subtitle') {
+        return track;
+      }
+      let label = '';
+      if (index === 0) {
+        label = 'zh-Hans';
+      } else if (index === 1) {
+        label = 'zh-Hant';
+      }
+      index += 1;
+      return { ...track, label };
+    }),
+  }));
+}
 
-async function pickFileOp(
-  role: 'a' | 'b',
+// ── extracted async file-pick handlers ───────────────────────────────────────
+
+/** 文件对话框过滤器（A / B 一致：视频 + 字幕） */
+const FILE_FILTERS = [
+  { name: '视频 / 字幕文件', extensions: MEDIA_EXTENSIONS },
+  { name: '视频文件', extensions: VIDEO_EXTENSIONS },
+  { name: '字幕文件', extensions: SUBTITLE_EXTENSIONS },
+];
+
+function fileNameOf(path: string): string {
+  return path.split(/[/\\]/).pop() ?? path;
+}
+
+function dirOf(path: string): string {
+  return path.replace(/[/\\][^/\\]+$/, '');
+}
+
+async function identifyTracks(path: string): Promise<SelectedTrack[]> {
+  return invoke<SelectedTrack[]>('identify_tracks', { path });
+}
+
+/** A 版：单选文件，首次选择时顺带推断输出目录与输出文件名 */
+async function pickFileAOp(
+  setDraft: Dispatch<SetStateAction<DraftState>>,
+  setFileLoading: Dispatch<SetStateAction<{ a: boolean; b: boolean }>>,
+): Promise<void> {
+  const result = await open({ title: '选择 A 版文件', filters: FILE_FILTERS, multiple: false });
+  if (result === null || typeof result !== 'string') {
+    return;
+  }
+  const name = fileNameOf(result);
+  setFileLoading((prev) => ({ ...prev, a: true }));
+  try {
+    const tracks = applyDefaults(await identifyTracks(result), 'a');
+    setDraft((prev) => {
+      const next: DraftState = { ...prev, fileA: { path: result, name, tracks } };
+      if (prev.outputDir === null) {
+        next.outputDir = dirOf(result);
+      }
+      if (prev.outputName === '') {
+        next.outputName = `${name.replace(/\.[^.]+$/, '')}_merged.mkv`;
+      }
+      return next;
+    });
+  } catch (error: unknown) {
+    setDraft((prev) => ({ ...prev, fileA: { path: result, name, tracks: [] } }));
+    void Promise.reject(new Error(String(error)));
+  } finally {
+    setFileLoading((prev) => ({ ...prev, a: false }));
+  }
+}
+
+/** B 版：一次可选多个字幕 / 附加文件，重复选择整体替换 */
+async function pickFileBOp(
   setDraft: Dispatch<SetStateAction<DraftState>>,
   setFileLoading: Dispatch<SetStateAction<{ a: boolean; b: boolean }>>,
 ): Promise<void> {
   const result = await open({
-    title: `选择 ${role.toUpperCase()} 版文件`,
-    filters: [{ name: '视频文件', extensions: ['mkv', 'mp4', 'avi', 'mov'] }],
-    multiple: false,
+    title: '选择 B 版文件（可多选）',
+    filters: FILE_FILTERS,
+    multiple: true,
   });
-  if (result === null || typeof result !== 'string') {
+  if (result === null) {
     return;
   }
-  const name = result.split(/[/\\]/).pop() ?? result;
-  setFileLoading((prev) => (role === 'a' ? { ...prev, a: true } : { ...prev, b: true }));
+  const paths = Array.isArray(result) ? result : [result];
+  if (paths.length === 0) {
+    return;
+  }
+  setFileLoading((prev) => ({ ...prev, b: true }));
   try {
-    const raw = await invoke<SelectedTrack[]>('identify_tracks', { path: result });
-    const tracks = applyDefaults(raw, role);
-    if (role === 'a') {
-      setDraft((prev) => {
-        const next: DraftState = { ...prev, fileA: { path: result, name, tracks } };
-        if (prev.outputDir === null) {
-          next.outputDir = result.replace(/[/\\][^/\\]+$/, '');
-        }
-        if (prev.outputName === '') {
-          next.outputName = `${name.replace(/\.[^.]+$/, '')}_merged.mkv`;
-        }
-        return next;
-      });
-    } else {
-      setDraft((prev) => ({ ...prev, fileB: { path: result, name, tracks } }));
+    const files: FileState[] = [];
+    for (const path of paths) {
+      const name = fileNameOf(path);
+      try {
+        files.push({ path, name, tracks: applyDefaults(await identifyTracks(path), 'b') });
+      } catch (error: unknown) {
+        files.push({ path, name, tracks: [] });
+        void Promise.reject(new Error(String(error)));
+      }
     }
-  } catch (error: unknown) {
-    if (role === 'a') {
-      setDraft((prev) => ({ ...prev, fileA: { path: result, name, tracks: [] } }));
-    } else {
-      setDraft((prev) => ({ ...prev, fileB: { path: result, name, tracks: [] } }));
-    }
-    void Promise.reject(new Error(String(error)));
+    setDraft((prev) => ({ ...prev, fileB: applySubtitleLabels(files) }));
   } finally {
-    setFileLoading((prev) => (role === 'a' ? { ...prev, a: false } : { ...prev, b: false }));
+    setFileLoading((prev) => ({ ...prev, b: false }));
   }
 }
 
@@ -65,6 +147,7 @@ async function pickFileOp(
 
 function updateTrackOp(
   role: 'a' | 'b',
+  fileIndex: number,
   id: number,
   patch: Partial<Pick<SelectedTrack, 'selected' | 'label'>>,
   setDraft: Dispatch<SetStateAction<DraftState>>,
@@ -76,12 +159,14 @@ function updateTrackOp(
       ...prev,
       fileA: { ...prev.fileA, tracks: updater(prev.fileA.tracks) },
     }));
-  } else {
-    setDraft((prev) => ({
-      ...prev,
-      fileB: { ...prev.fileB, tracks: updater(prev.fileB.tracks) },
-    }));
+    return;
   }
+  setDraft((prev) => ({
+    ...prev,
+    fileB: prev.fileB.map((file, idx) =>
+      idx === fileIndex ? { ...file, tracks: updater(file.tracks) } : file,
+    ),
+  }));
 }
 
 function swapped<T>(arr: T[], i: number, j: number): T[] {
@@ -100,6 +185,7 @@ function swapped<T>(arr: T[], i: number, j: number): T[] {
 
 function moveTrackOp(
   role: 'a' | 'b',
+  fileIndex: number,
   id: number,
   dir: -1 | 1,
   setDraft: Dispatch<SetStateAction<DraftState>>,
@@ -115,18 +201,21 @@ function moveTrackOp(
         fileA: { ...prev.fileA, tracks: swapped(prev.fileA.tracks, idx, idx + dir) },
       };
     });
-  } else {
-    setDraft((prev) => {
-      const idx = prev.fileB.tracks.findIndex((t) => t.id === id);
-      if (idx < 0 || idx + dir < 0 || idx + dir >= prev.fileB.tracks.length) {
-        return prev;
-      }
-      return {
-        ...prev,
-        fileB: { ...prev.fileB, tracks: swapped(prev.fileB.tracks, idx, idx + dir) },
-      };
-    });
+    return;
   }
+  setDraft((prev) => ({
+    ...prev,
+    fileB: prev.fileB.map((file, idx) => {
+      if (idx !== fileIndex) {
+        return file;
+      }
+      const trackIdx = file.tracks.findIndex((t) => t.id === id);
+      if (trackIdx < 0 || trackIdx + dir < 0 || trackIdx + dir >= file.tracks.length) {
+        return file;
+      }
+      return { ...file, tracks: swapped(file.tracks, trackIdx, trackIdx + dir) };
+    }),
+  }));
 }
 
 function addToQueueOp(
@@ -135,12 +224,7 @@ function addToQueueOp(
   setDraft: Dispatch<SetStateAction<DraftState>>,
 ): void {
   const name = draft.outputName.trim();
-  if (
-    draft.fileA.path === null ||
-    draft.fileB.path === null ||
-    draft.outputDir === null ||
-    name === ''
-  ) {
+  if (draft.fileA.path === null || draft.outputDir === null || name === '') {
     return;
   }
   const { outputDir } = draft;
@@ -166,12 +250,7 @@ function updateJobOp(
   setDraft: Dispatch<SetStateAction<DraftState>>,
 ): void {
   const name = draft.outputName.trim();
-  if (
-    draft.fileA.path === null ||
-    draft.fileB.path === null ||
-    draft.outputDir === null ||
-    name === ''
-  ) {
+  if (draft.fileA.path === null || draft.outputDir === null || name === '') {
     return;
   }
   const { outputDir } = draft;
@@ -243,14 +322,16 @@ function useMergeEvents(
 interface TracksActions {
   startNewDraft: () => void;
   loadJobIntoDraft: (job: MergeJob) => void;
-  pickFile: (role: 'a' | 'b') => Promise<void>;
+  pickFileA: () => Promise<void>;
+  pickFileB: () => Promise<void>;
   pickOutputDir: () => Promise<void>;
   updateTrack: (
     role: 'a' | 'b',
+    fileIndex: number,
     id: number,
     patch: Partial<Pick<SelectedTrack, 'selected' | 'label'>>,
   ) => void;
-  moveTrack: (role: 'a' | 'b', id: number, dir: -1 | 1) => void;
+  moveTrack: (role: 'a' | 'b', fileIndex: number, id: number, dir: -1 | 1) => void;
   addToQueue: () => void;
   updateJob: () => void;
   cancelEdit: () => void;
@@ -287,17 +368,20 @@ function useTracksActions(deps: TracksActionsDeps): TracksActions {
         outputName: job.outputName,
       });
     },
-    pickFile: async (role) => {
-      await pickFileOp(role, setDraft, setFileLoading);
+    pickFileA: async () => {
+      await pickFileAOp(setDraft, setFileLoading);
+    },
+    pickFileB: async () => {
+      await pickFileBOp(setDraft, setFileLoading);
     },
     pickOutputDir: async () => {
       await pickOutputDirOp(setDraft);
     },
-    updateTrack: (role, id, patch) => {
-      updateTrackOp(role, id, patch, setDraft);
+    updateTrack: (role, fileIndex, id, patch) => {
+      updateTrackOp(role, fileIndex, id, patch, setDraft);
     },
-    moveTrack: (role, id, dir) => {
-      moveTrackOp(role, id, dir, setDraft);
+    moveTrack: (role, fileIndex, id, dir) => {
+      moveTrackOp(role, fileIndex, id, dir, setDraft);
     },
     addToQueue: () => {
       addToQueueOp(draft, setJobs, setDraft);
@@ -362,10 +446,10 @@ export function useTracksPage(): {
     pendingCount: jobs.filter((j) => j.status === 'pending').length,
     canSubmit:
       draft.fileA.path !== null &&
-      draft.fileB.path !== null &&
       draft.outputDir !== null &&
       draft.outputName.trim() !== '' &&
-      (draft.fileA.tracks.some((t) => t.selected) || draft.fileB.tracks.some((t) => t.selected)),
+      (draft.fileA.tracks.some((t) => t.selected) ||
+        draft.fileB.some((file) => file.tracks.some((t) => t.selected))),
     ...actions,
   };
 }
