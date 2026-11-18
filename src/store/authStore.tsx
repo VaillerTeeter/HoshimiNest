@@ -148,18 +148,19 @@ function useSessionRestore(
   tokenRef: MutableRefObject<string | null>,
 ): void {
   useEffect(() => {
-    // 用对象 flag 而非 `let cancelled`：后者在 IIFE 内会被 TypeScript 收窄成
-    // 恒为 false（赋值只发生在后面声明的 cleanup 闭包里），触发 no-unnecessary-condition。
+    // 用「对象 flag + 读取函数」而非 `let cancelled`：后者在 IIFE 内会被 TypeScript
+    // 收窄成恒为 false，而直接读 `state.cancelled` 又会碰上属性收窄，函数读取器可绕开两者。
     const state = { cancelled: false };
+    const isCancelled = (): boolean => state.cancelled;
     void (async () => {
       const token = await loadToken();
-      if (state.cancelled || token === null) {
+      if (isCancelled() || token === null) {
         return;
       }
       tokenRef.current = token;
       applyBgmToken(token);
       const result = await probeToken(token);
-      if (state.cancelled) {
+      if (isCancelled()) {
         return;
       }
       if (result.kind === 'ok') {

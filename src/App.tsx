@@ -224,16 +224,14 @@ function TopbarUser(): React.JSX.Element {
         aria-haspopup="dialog"
         aria-expanded={accountOpen}
         onClick={() => {
-          setAccountPos((prev) => {
-            if (prev !== null) {
-              return null;
-            }
-            const rect = avatarRef.current?.getBoundingClientRect();
-            if (rect === undefined) {
-              return null;
-            }
-            return { left: rect.left - 4, top: rect.bottom + 6 };
-          });
+          if (accountOpen) {
+            setAccountPos(null);
+            return;
+          }
+          const rect = avatarRef.current?.getBoundingClientRect();
+          if (rect !== undefined) {
+            setAccountPos({ left: rect.left - 4, top: rect.bottom + 6 });
+          }
         }}
       >
         {profile !== null && profile.avatarUrl !== '' ? (

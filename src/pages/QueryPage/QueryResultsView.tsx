@@ -11,7 +11,7 @@ import { ResultsList } from './ResultsList';
 import { SubjectDetail } from './SubjectDetail';
 import { SOURCES, AUDIENCES, PLATFORMS, REGIONS, GENRES } from './queryHelpers';
 import { useFilteredSubjects } from './subjectFilters';
-import { type FilterState, type QueryMode } from './useQueryPageState';
+import type { FilterState, QueryMode } from './useQueryPageState';
 import { useCharacters, useEpisodes, usePersons } from './useSubjectData';
 
 // ── SubjectDetailPanel ───────────────────────────────────────────────────────

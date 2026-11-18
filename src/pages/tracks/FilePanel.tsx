@@ -101,7 +101,7 @@ function FileBody({
     );
   }
   if (side === 'a') {
-    const file = files[0];
+    const [file] = files;
     return (
       <>
         <div className="tw-file-name" title={file.path ?? undefined}>

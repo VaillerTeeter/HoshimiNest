@@ -22,7 +22,7 @@ const KEYWORD_CACHE_LIMIT = 12;
  * @returns Normalized keyword
  */
 export function normalizeKeyword(keyword: string): string {
-  return keyword.trim().replaceAll(/\s+/g, ' ');
+  return keyword.trim().split(/\s+/).join(' ');
 }
 
 /**

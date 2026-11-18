@@ -189,7 +189,7 @@ function AccountProfile({ profile, refreshing, onLogout }: AccountProfileProps):
  *
  * @param props - 弹框属性
  * @param props.open - 是否展开
- * @param props.anchorRef - 头像按钮引用（弹框按其位置固定定位）
+ * @param props.pos - 弹框的固定定位坐标；null 表示尚未测量
  * @param props.profile - 登录用户画像；未登录为 null
  * @param props.submitting - 登录校验中
  * @param props.refreshing - 后台刷新个人信息中

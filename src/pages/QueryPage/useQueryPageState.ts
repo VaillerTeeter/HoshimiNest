@@ -288,14 +288,8 @@ async function runSearch(
   ui: SearchUi,
   task: (isCancelled: () => boolean, onPartial: (subjects: Subject[]) => void) => Promise<void>,
 ): Promise<void> {
-  const {
-    setIsLoading,
-    setResults,
-    setSearchError,
-    setSearchEmpty,
-    onLoadingChange,
-    cancelRef,
-  } = ui;
+  const { setIsLoading, setResults, setSearchError, setSearchEmpty, onLoadingChange, cancelRef } =
+    ui;
   setIsLoading(true);
   onLoadingChange?.(true);
   setResults([]);
@@ -314,16 +308,15 @@ async function runSearch(
     cancelRef.current = cancel;
   }
   let loaded = 0;
+  const isCancelled = (): boolean => cancelledRef.cancelled;
+  const onPartial = (partial: Subject[]): void => {
+    loaded = partial.length;
+    if (!cancelledRef.cancelled) {
+      setResults(partial);
+    }
+  };
   try {
-    await task(
-      () => cancelledRef.cancelled,
-      (partial) => {
-        loaded = partial.length;
-        if (!cancelledRef.cancelled) {
-          setResults(partial);
-        }
-      },
-    );
+    await task(isCancelled, onPartial);
     if (!cancelledRef.cancelled) {
       setSearchEmpty(loaded === 0);
     }
