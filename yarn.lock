@@ -222,10 +222,10 @@ animal-island-ui@^1.7.0:
   resolved "https://registry.yarnpkg.com/animal-island-ui/-/animal-island-ui-1.7.0.tgz#0356a598fec0ff6b38ef2afe85014badbb42abc7"
   integrity sha512-KVqjaZBHQuoEYjswuRfnyB0aLQfnUM6H0tJqeXXrzwL1UQI0qXjDMNPEwIrUb8cyIt9nwwIW1NAxEiBwMVbStw==
 
-bangumi-api-client@^2026.6.14:
-  version "2026.6.14"
-  resolved "https://registry.yarnpkg.com/bangumi-api-client/-/bangumi-api-client-2026.6.14.tgz#b50274fb623c95d0a17d824d31fdfd2691212dfd"
-  integrity sha512-/9zYGn2JGRSvvRQrsil4z/DmQ7C6WN8gmuBnjO6sRfkg1gIH+Ziki3/Y6ij7uLhr9umDlp3yS/PlGQatumMJvA==
+bangumi-api-client@^2026.11.21:
+  version "2026.11.21"
+  resolved "https://registry.yarnpkg.com/bangumi-api-client/-/bangumi-api-client-2026.11.21.tgz#9ba670fcc11dca15d20eec3322da90acec580b70"
+  integrity sha512-RRpCVDLANOMBM3xSFg8WLB+UF3Cqye6ph3l0IvkKPtNKdwZfsAhOhHdWXoAw9FqMPXEaivPf8TPasN9xZQ9a/g==
 
 classnames@^2.5.1:
   version "2.5.1"
