@@ -1,4 +1,4 @@
-import type { Subject } from 'bangumi-api-client';
+import type { GetSubjectsResult, Subject } from 'bangumi-api-client';
 import { useState, useEffect, useCallback } from 'react';
 
 import { bgm } from '../../relay';
@@ -17,7 +17,7 @@ import {
   getAvailableSeasons,
   currentYear,
 } from './queryHelpers';
-import { SEARCH_CONCURRENCY, SEARCH_PAGE_SIZE } from './searchConstants';
+import { BROWSE_PAGE_SIZE } from './searchConstants';
 
 export function seasonLabel(s: SeasonKey): string {
   switch (s) {
@@ -36,96 +36,57 @@ export function seasonLabel(s: SeasonKey): string {
   }
 }
 
-// ── fetchMonth ───────────────────────────────────────────────────────────────
+// ── month page (browse) ──────────────────────────────────────────────────────
 
 /**
- * Fetch all subjects for one month, handling pagination.
+ * Fetch one page of subjects that aired in a given month.
+ *
+ * The browse endpoint is the only complete source for a season — the search
+ * index misses roughly half of the entries — so the season loader is built on
+ * it. A failed request returns null instead of throwing: one lost page must not
+ * discard the subjects that were already collected.
  *
  * @param yearNum - The year to fetch subjects for
  * @param month - The month to fetch subjects for
- * @param isCancelled - Callback returning true if the operation was cancelled
- * @returns Array of subjects for the given month
+ * @param offset - Pagination offset
+ * @returns The page, or null when the request failed
  */
-async function fetchMonth(
+async function fetchMonthPage(
   yearNum: number,
   month: number,
-  isCancelled: () => boolean,
-): Promise<Subject[]> {
-  const limit = 25;
-  const collected: Subject[] = [];
-  let offset = 0;
-  let total = Number.POSITIVE_INFINITY;
-
-  while (offset < total) {
-    if (isCancelled()) {
-      break;
-    }
+  offset: number,
+): Promise<GetSubjectsResult | null> {
+  try {
     const res = await bgm.subjects.getSubjects({
       type: 2,
       year: yearNum,
       month,
-      limit,
+      limit: BROWSE_PAGE_SIZE,
       offset,
       sort: 'date',
     });
-    if (res.data === undefined) {
-      break;
-    }
-    collected.push(...res.data.data);
-    ({ total } = res.data);
-    offset += res.data.data.length;
-    if (res.data.data.length === 0) {
-      break;
-    }
+    return res.data ?? null;
+  } catch {
+    return null;
   }
-  return collected;
 }
 
-// -- season search (POST /v0/search/subjects) --------------------------------
-
-/** Season results are stable enough to keep them for the whole session. */
-const seasonCache = new Map<string, Subject[]>();
-const SEASON_CACHE_LIMIT = 12;
-
-/**
- * Map a season to the [inclusive, exclusive) air_date range used by the search api.
- *
- * @param yearNum - Year of the season
- * @param season - Season key
- * @returns Start and end date strings, e.g. ['2026-01-01', '2026-04-01']
- */
-function seasonDateRange(yearNum: number, season: SeasonKey): [string, string] {
-  const months = seasonToMonths(season);
-  const pad = (value: number): string => String(value).padStart(2, '0');
-  const endMonth = months[2] + 1;
-  const endYear = endMonth > 12 ? yearNum + 1 : yearNum;
-  return [
-    `${String(yearNum)}-${pad(months[0])}-01`,
-    `${String(endYear)}-${pad(endMonth > 12 ? 1 : endMonth)}-01`,
-  ];
-}
+// ── season loading (browse by month, one pipeline per month) ─────────────────
 
 function sortByDate(subjects: Subject[]): Subject[] {
   return [...subjects].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
 }
 
-function rememberSeason(key: string, subjects: Subject[]): void {
-  seasonCache.delete(key);
-  seasonCache.set(key, subjects);
-  if (seasonCache.size > SEASON_CACHE_LIMIT) {
-    const [oldest] = seasonCache.keys();
-    if (oldest !== undefined) {
-      seasonCache.delete(oldest);
-    }
-  }
-}
-
 /**
- * Fetch a whole season with one air_date range query instead of three
- * month-scoped browse queries: the browse endpoint needs ~3.8 s per request,
- * the search endpoint ~0.5 s.
+ * Fetch a whole season through the browse endpoint, one pipeline per month.
  *
- * `onPartial` fires after every batch so the list renders progressively.
+ * The search endpoint is ~7x faster but its index misses roughly half of a
+ * season's entries, so browse stays the source of truth. With `limit=100` a
+ * month needs 1-2 requests; the three months run in parallel and each month
+ * fetches its own extra pages as soon as its first page lands, so the list
+ * renders as soon as the first month arrives instead of waiting for all three.
+ *
+ * `onPartial` fires after every merged page so the list renders progressively.
  *
  * @param yearNum - Year of the season
  * @param season - Season key
@@ -139,102 +100,40 @@ async function fetchSeason(
   isCancelled: () => boolean,
   onPartial: (subjects: Subject[]) => void,
 ): Promise<Subject[]> {
-  const [from, to] = seasonDateRange(yearNum, season);
-  const collected: Subject[] = [];
-  const seen = new Set<number>();
+  const months = seasonToMonths(season);
+  const collected = new Map<number, Subject>();
+  let failedMonths = 0;
 
-  const loadPage = async (offset: number): Promise<number> => {
-    const res = await bgm.subjects.searchSubjects({
-      keyword: '',
-      filter: { type: [2], air_date: [`>=${from}`, `<${to}`] },
-      limit: SEARCH_PAGE_SIZE,
-      offset,
-    });
-    if (res.data === undefined) {
-      throw new Error('searchSubjects returned no data');
+  const collect = (page: GetSubjectsResult): void => {
+    for (const item of page.data) {
+      collected.set(item.id, item);
     }
-    const fresh = res.data.data.filter((item) => !seen.has(item.id));
-    for (const item of fresh) {
-      seen.add(item.id);
-    }
-    collected.push(...fresh);
-    return res.data.total;
+    onPartial(sortByDate([...collected.values()]));
   };
 
-  const total = await loadPage(0);
-  onPartial(sortByDate(collected));
-
-  const offsets: number[] = [];
-  for (let offset = SEARCH_PAGE_SIZE; offset < total; offset += SEARCH_PAGE_SIZE) {
-    offsets.push(offset);
-  }
-
-  for (let index = 0; index < offsets.length; index += SEARCH_CONCURRENCY) {
-    if (isCancelled()) {
-      break;
+  const loadMonth = async (month: number): Promise<void> => {
+    const first = await fetchMonthPage(yearNum, month, 0);
+    if (first === null) {
+      failedMonths += 1;
+      return;
     }
-    const batch = offsets.slice(index, index + SEARCH_CONCURRENCY);
-    await Promise.all(batch.map((offset) => loadPage(offset)));
-    onPartial(sortByDate(collected));
-  }
-
-  return sortByDate(collected);
-}
-
-/**
- * Fallback loader: browse one page per month (slower, but battle tested).
- *
- * @param yearNum - Year of the season
- * @param season - Season key
- * @param isCancelled - Callback returning true when the request was cancelled
- * @param onPartial - Callback invoked with the sorted partial result list
- * @returns All subjects of the season, sorted by air date
- */
-async function fetchSeasonByMonth(
-  yearNum: number,
-  season: SeasonKey,
-  isCancelled: () => boolean,
-  onPartial: (subjects: Subject[]) => void,
-): Promise<Subject[]> {
-  const collected: Subject[] = [];
-  for (const month of seasonToMonths(season)) {
-    if (isCancelled()) {
-      break;
+    collect(first);
+    for (let offset = BROWSE_PAGE_SIZE; offset < first.total; offset += BROWSE_PAGE_SIZE) {
+      if (isCancelled()) {
+        return;
+      }
+      const page = await fetchMonthPage(yearNum, month, offset);
+      if (page !== null) {
+        collect(page);
+      }
     }
-    const monthResults = await fetchMonth(yearNum, month, isCancelled);
-    collected.push(...monthResults);
-    onPartial(sortByDate(collected));
-  }
-  return sortByDate(collected);
-}
+  };
 
-/**
- * Load one season and cache it, falling back to per-month browsing on failure.
- *
- * @param yearNum - Year of the season
- * @param season - Season key
- * @param cacheKey - Cache key of the season
- * @param isCancelled - Callback returning true when the request was cancelled
- * @param onPartial - Callback invoked with the sorted partial result list
- * @returns Nothing - results are delivered through the onPartial callback
- */
-async function loadSeason(
-  yearNum: number,
-  season: SeasonKey,
-  cacheKey: string,
-  isCancelled: () => boolean,
-  onPartial: (subjects: Subject[]) => void,
-): Promise<void> {
-  let subjects: Subject[];
-  try {
-    subjects = await fetchSeason(yearNum, season, isCancelled, onPartial);
-  } catch {
-    // The search api is unavailable; fall back to per-month browsing.
-    subjects = await fetchSeasonByMonth(yearNum, season, isCancelled, onPartial);
+  await Promise.all(months.map((month) => loadMonth(month)));
+  if (failedMonths === months.length) {
+    throw new Error('browse endpoint returned no data');
   }
-  if (!isCancelled()) {
-    rememberSeason(cacheKey, subjects);
-  }
+  return sortByDate([...collected.values()]);
 }
 
 // ── useYearSeason ────────────────────────────────────────────────────────────
@@ -383,14 +282,8 @@ export function useQuerySearch(
     setActiveKeyword('');
     resetFilters();
     const yearNum = Number(year);
-    const cacheKey = `${String(yearNum)}-${season}`;
     await runSearch(searchUi, async (isCancelled, onPartial) => {
-      const cached = seasonCache.get(cacheKey);
-      if (cached === undefined) {
-        await loadSeason(yearNum, season, cacheKey, isCancelled, onPartial);
-      } else {
-        onPartial(cached);
-      }
+      await fetchSeason(yearNum, season, isCancelled, onPartial);
     });
   }
 
