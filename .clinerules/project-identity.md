@@ -120,6 +120,7 @@ yarn rustcheck     # cargo check (Rust compilation check only)
 
 - All Bangumi / Nyaa traffic MUST go through the relay defined in `src/relay.ts`; never hardcode `api.bgm.tv`, `lain.bgm.tv` or `nyaa.si`.
 - Bangumi tokens are persisted by Rust (Windows DPAPI) in `<app_config_dir>/bangumi-auth.json`; NEVER store credentials in `localStorage`.
+- The season list MUST use the browse endpoint (`GET /v0/subjects` with `year` + `month`, `limit=100`); `POST /v0/search/subjects` is keyword-search only — its index is incomplete (2026 autumn: 189 vs 89 entries).
 
 ## Window Config
 

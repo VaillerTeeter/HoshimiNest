@@ -144,6 +144,8 @@ NEVER store tokens, passwords or other credentials in `localStorage` / `sessionS
 
 Only non-sensitive profile fields (id / username / nickname / avatarUrl) may be cached in `localStorage`.
 
+The season list MUST be loaded through the browse endpoint (`bgm.subjects.getSubjects` with `year` + `month`, `limit: 100`). `POST /v0/search/subjects` is for keyword search only — its index misses roughly half of a season's entries (measured 2026 autumn: browse 189 vs search 89).
+
 ## Pre-existing Dependencies
 
 NEVER suggest installing or re-installing these — already in `package.json`:

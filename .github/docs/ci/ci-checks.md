@@ -381,7 +381,7 @@ Lint 工作流中所有独立 job 通过后，`all-checks` 汇总 gate 将所有
 | 编译打包 | `yarn tauri:build` |
 | 创建 Release | `softprops/action-gh-release`，上传 `src-tauri/target/release/bundle/nsis/*.exe`，并自动生成 release notes |
 
-> 发版操作步骤见 [README 的发版流程](../../../README.md#发版流程)。
+> 发版操作步骤见 [README 的发版流程](../../../README.md#发版流程)；`src-tauri/Cargo.lock` 中 `hoshiminest` 的 `version` 由 `cargo` 自动同步（`yarn rustcheck` / `yarn tauri:build` 会写入），升版本后请先跑一次 `yarn rustcheck` 再提交。
 
 ---
 
